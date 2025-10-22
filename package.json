@@ -1,0 +1,27 @@
+{
+  "name": "web3d-racing-demo",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "vite",
+    "build": "echo \"No build configured\"",
+    "test": "vitest --run",
+    "demo": "npx http-server demos -p 8081",
+    "demo:ci": "node tools/ci/run_gpu_demo.js",
+    "typecheck": "tsc --noEmit",
+    "generate-textures": "node tools/generate_textures.js"
+  },
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.11.1",
+    "gl": "^8.1.6",
+    "puppeteer": "^24.25.0",
+    "three": "^0.158.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.165.0",
+    "jimp": "^0.16.1",
+    "typescript": "^5.1.6",
+    "vite": "^5.2.0",
+    "vitest": "^0.34.3"
+  }
+}

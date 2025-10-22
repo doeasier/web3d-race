@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
+MinimumVisualStudioVersion = 10.0.40219.1
+
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(SolutionItems) = preSolution
+		package.json = package.json
+		tsconfig.json = tsconfig.json
+		vitest.config.ts = vitest.config.ts
+		src\core\types.ts = src\core\types.ts
+		src\gameplay\vehicleMath.ts = src\gameplay\vehicleMath.ts
+		src\gameplay\FakePhysicsWorld.ts = src\gameplay\FakePhysicsWorld.ts
+		src\gameplay\VehicleControllerFast.ts = src\gameplay\VehicleControllerFast.ts
+		tests\__tests__\math_utils.test.ts = tests\__tests__\math_utils.test.ts
+		tests\__tests__\vehicle_fast.test.ts = tests\__tests__\vehicle_fast.test.ts
+		docs\system_design.md = docs\system_design.md
+		docs\system_test_plan.md = docs\system_test_plan.md
+	EndGlobalSection
+EndGlobal

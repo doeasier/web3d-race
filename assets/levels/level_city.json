@@ -1,0 +1,7 @@
+{
+  "id": "level_city",
+  "name": "City Circuit",
+  "startPositions": [ { "position": [0, 0, 0], "rotation": [0, 0, 0] } ],
+  "checkpoints": [ { "id": "cp1", "position": [0,0,20], "radius": 5 } ],
+  "performanceHints": { "recommendedMode": "fast" }
+}

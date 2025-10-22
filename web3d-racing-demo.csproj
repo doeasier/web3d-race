@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Disable default C#/SDK compile behavior so this project won't attempt to compile frontend TS as C# -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Web3dRacingDemo</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Treat frontend/source files as non-compiled content so the .NET build won't try to parse them -->
+    <None Include="package.json" />
+    <None Include="tsconfig.json" />
+    <None Include="vitest.config.ts" />
+    <None Include="src\core\types.ts" />
+    <None Include="src\gameplay\vehicleMath.ts" />
+    <None Include="src\gameplay\FakePhysicsWorld.ts" />
+    <None Include="src\gameplay\VehicleControllerFast.ts" />
+    <None Include="tests\__tests__\math_utils.test.ts" />
+    <None Include="tests\__tests__\vehicle_fast.test.ts" />
+    <None Include="docs\system_design.md" />
+    <None Include="docs\system_test_plan.md" />
+  </ItemGroup>
+</Project>

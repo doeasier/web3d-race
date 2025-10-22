@@ -1,0 +1,7 @@
+{
+  "id": "level_canyon",
+  "name": "Canyon Night",
+  "startPositions": [ { "position": [0, 0, 0], "rotation": [0, 0, 0] } ],
+  "checkpoints": [ { "id": "cp1", "position": [0,0,30], "radius": 5 } ],
+  "performanceHints": { "recommendedMode": "precise" }
+}

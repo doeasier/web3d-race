@@ -1,0 +1,31 @@
+{
+  "id": "desert_run",
+  "name": "Desert Run",
+  "description": "A long, fast desert highway with sweeping S curves, a few gentle climbs and a dramatic hairpin near the canyon.",
+  "recommendedMode": "fast",
+  "startPositions": [ { "position": [0, 0.0, 0], "rotation": [0, 0, 0] } ],
+  "controlPoints": [
+    { "x": 0, "y": 0, "z": 0, "bank": 0 },
+    { "x": 0, "y": 0.5, "z": 40, "bank": 0.03 },
+    { "x": 4, "y": 1.0, "z": 120, "bank": 0.05 },
+    { "x": 10, "y": 1.5, "z": 220, "bank": 0.08 },
+    { "x": 18, "y": 2.0, "z": 320, "bank": 0.08 },
+    { "x": 22, "y": 1.8, "z": 380, "bank": 0.06 },
+    { "x": 18, "y": 1.2, "z": 440, "bank": 0.04 },
+    { "x": 8, "y": 0.8, "z": 520, "bank": 0.02 },
+    { "x": 0, "y": 0.5, "z": 600, "bank": 0 },
+    { "x": -6, "y": 0.3, "z": 680, "bank": -0.02 },
+    { "x": -12, "y": 0.0, "z": 760, "bank": -0.04 },
+    { "x": -14, "y": -0.5, "z": 840, "bank": -0.06 },
+    { "x": -10, "y": -1.0, "z": 920, "bank": -0.04 },
+    { "x": -2, "y": -1.2, "z": 1000, "bank": -0.02 },
+    { "x": 6, "y": -1.0, "z": 1080, "bank": 0 },
+    { "x": 14, "y": -0.8, "z": 1160, "bank": 0.03 },
+    { "x": 22, "y": -0.5, "z": 1240, "bank": 0.04 },
+    { "x": 22, "y": -0.5, "z": 1320, "bank": 0.02 },
+    { "x": 12, "y": -0.2, "z": 1400, "bank": 0 },
+    { "x": 4, "y": 0.0, "z": 1480, "bank": 0 },
+    { "x": 0, "y": 0.0, "z": 1560, "bank": 0 },
+    { "x": 0, "y": 0.0, "z": 1640, "bank": 0 }
+  ]
+}

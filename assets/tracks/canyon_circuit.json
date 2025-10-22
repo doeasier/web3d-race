@@ -1,0 +1,32 @@
+{
+  "id": "canyon_circuit",
+  "name": "Canyon Circuit",
+  "description": "A technical circuit through narrow canyon passages featuring tight hairpins, short straights and sweeping S sections at varying elevations.",
+  "recommendedMode": "precise",
+  "startPositions": [ { "position": [0, 0.0, 0], "rotation": [0, 0, 0] } ],
+  "controlPoints": [
+    { "x": 0, "y": 0, "z": 0, "bank": 0 },
+    { "x": 2, "y": 0.3, "z": 30, "bank": 0.02 },
+    { "x": 6, "y": 0.6, "z": 70, "bank": 0.04 },
+    { "x": 10, "y": 1.0, "z": 120, "bank": 0.06 },
+    { "x": 14, "y": 1.4, "z": 170, "bank": 0.05 },
+    { "x": 12, "y": 1.2, "z": 220, "bank": 0.02 },
+    { "x": 6, "y": 0.8, "z": 260, "bank": -0.01 },
+    { "x": 0, "y": 0.5, "z": 300, "bank": -0.02 },
+    { "x": -8, "y": 0.4, "z": 340, "bank": -0.04 },
+    { "x": -16, "y": 0.2, "z": 380, "bank": -0.06 },
+    { "x": -18, "y": -0.2, "z": 420, "bank": -0.08 },
+    { "x": -10, "y": -0.6, "z": 460, "bank": -0.05 },
+    { "x": -2, "y": -0.8, "z": 500, "bank": 0 },
+    { "x": 4, "y": -0.6, "z": 540, "bank": 0.03 },
+    { "x": 10, "y": -0.4, "z": 580, "bank": 0.05 },
+    { "x": 14, "y": -0.2, "z": 620, "bank": 0.04 },
+    { "x": 12, "y": 0.0, "z": 660, "bank": 0.02 },
+    { "x": 6, "y": 0.2, "z": 700, "bank": 0 },
+    { "x": 0, "y": 0.4, "z": 740, "bank": -0.02 },
+    { "x": -4, "y": 0.6, "z": 780, "bank": -0.03 },
+    { "x": -8, "y": 0.8, "z": 820, "bank": -0.02 },
+    { "x": -6, "y": 1.0, "z": 860, "bank": 0 },
+    { "x": 0, "y": 1.2, "z": 900, "bank": 0 }
+  ]
+}

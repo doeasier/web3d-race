@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Solution Name="WEB3D-AI-2026" Version="2026.0">
+  <!-- Visual Studio 2026 style XML solution representation (.slnx) -->
+  <Projects>
+    <Project>
+      <Name>web3d-racing-demo</Name>
+      <Type>Node</Type>
+      <Path>package.json</Path>
+      <Entry>src/index.ts</Entry>
+      <Tsconfig>tsconfig.json</Tsconfig>
+      <TestConfig>vitest.config.ts</TestConfig>
+      <ProjectGuid>{B1A7E3C9-9F4B-4F2D-80A1-3D2E1B6F7C01}</ProjectGuid>
+    </Project>
+    <Project>
+      <Name>documentation</Name>
+      <Type>Documentation</Type>
+      <Path>docs</Path>
+      <Entry>docs/system_design.md</Entry>
+      <ProjectGuid>{C2D8F4A1-5B6C-4E3F-9B2A-7E8D9C1F2B34}</ProjectGuid>
+    </Project>
+    <Project>
+      <Name>tests</Name>
+      <Type>Tests</Type>
+      <Path>tests</Path>
+      <Entry>tests/__tests__</Entry>
+      <ProjectGuid>{D3E9A5B2-6C7D-4F40-A3C2-8F9E0D2C3A45}</ProjectGuid>
+    </Project>
+  </Projects>
+
+  <Files>
+    <Core>
+      <File>src/core/types.ts</File>
+    </Core>
+    <Gameplay>
+      <File>src/gameplay/vehicleMath.ts</File>
+      <File>src/gameplay/FakePhysicsWorld.ts</File>
+      <File>src/gameplay/VehicleControllerFast.ts</File>
+    </Gameplay>
+    <Tests>
+      <File>tests/__tests__/math_utils.test.ts</File>
+      <File>tests/__tests__/vehicle_fast.test.ts</File>
+    </Tests>
+    <Config>
+      <File>package.json</File>
+      <File>tsconfig.json</File>
+      <File>vitest.config.ts</File>
+    </Config>
+    <Docs>
+      <File>docs/system_design.md</File>
+      <File>docs/system_test_plan.md</File>
+    </Docs>
+  </Files>
+
+  <Settings>
+    <Root>./</Root>
+    <DefaultProject>web3d-racing-demo</DefaultProject>
+    <VisualStudioVersion>18.0</VisualStudioVersion>
+  </Settings>
+</Solution>

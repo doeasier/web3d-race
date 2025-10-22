@@ -1,0 +1,21 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{B1A7E3C9-9F4B-4F2D-80A1-3D2E1B6F7C01}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Web3dRacingDemoNative</RootNamespace>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="package.json" />
+    <None Include="tsconfig.json" />
+    <None Include="vitest.config.ts" />
+    <None Include="src\core\types.ts" />
+    <None Include="src\gameplay\vehicleMath.ts" />
+    <None Include="src\gameplay\FakePhysicsWorld.ts" />
+    <None Include="src\gameplay\VehicleControllerFast.ts" />
+    <None Include="tests\__tests__\math_utils.test.ts" />
+    <None Include="tests\__tests__\vehicle_fast.test.ts" />
+    <None Include="docs\system_design.md" />
+    <None Include="docs\system_test_plan.md" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GPU Culling Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#222; color:#eee; margin:0; padding:16px }
+    #ui { position:fixed; left:16px; top:16px; background:rgba(0,0,0,0.6); padding:12px; border-radius:6px }
+    label, button, select { display:block; margin:6px 0 }
+    canvas { display:block; margin-top:120px; background:#111; width:100%; height:60vh }
+    .stat { margin-top:8px }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h3>GPU Culling Demo</h3>
+    <label>Instance count
+      <select id="countSelect"><option>1000</option><option>5000</option><option selected>10000</option><option>50000</option><option>100000</option></select>
+    </label>
+    <button id="runCpu">Run CPU Baseline</button>
+    <button id="runGpu">Run GPU PoC (WebGL2)</button>
+    <div class="stat" id="cpuResult">CPU: -</div>
+    <div class="stat" id="gpuResult">GPU: -</div>
+    <div class="stat" id="info">Info: initializing...</div>
+  </div>
+
+  <canvas id="glcanvas"></canvas>
+  <script src="./gpu_culling_demo.js"></script>
+</body>
+</html>
