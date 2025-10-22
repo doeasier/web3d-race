@@ -448,6 +448,8 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
         try { vehicle.update(dt); } catch (e) {}
         try { physicsWorld.step(dt); } catch (e) {}
         try { if (typeof vehicle.postPhysicsSync === 'function') (vehicle as any).postPhysicsSync(dt); } catch (e) {}
+        // ensure RoadManager applies planned instance groups after physics step
+        try { if (typeof (roadManager as any).postPhysicsSync === 'function') (roadManager as any).postPhysicsSync(); } catch (e) {}
       }
 
       if (physicsDebug) {

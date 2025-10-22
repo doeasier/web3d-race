@@ -85,6 +85,8 @@ export class RoadManager {
   private envRenderer: InstanceRenderer | null = null;
   // Optional spawner reference (PR-4a)
   private spawner: RoadsideSpawner | null = null;
+  // planned instance groups produced by update() and applied in postPhysicsSync()
+  private _plannedInstanceGroups: Record<string, RoadObjectDesc[]> = {};
   // feature flag to use InstanceRenderer path
   private useInstanceRenderer: boolean = true;
   // physics adapter integration
@@ -479,20 +481,13 @@ export class RoadManager {
     const segLen = this.config.segmentLength;
     const lampCountPerSegment = 4;
     if (this.envRenderer && this.useInstanceRenderer) {
-      // collect lamp descriptors and hand off to InstanceRenderer
-      // if spawner present, use its active descriptors grouped by type
+      // collect lamp descriptors and store planned groups to be applied in postPhysicsSync
       const allDescs: RoadObjectDesc[] = this.spawner ? this.spawner.getActiveDescs() : [];
-      // group by type using helper util
       const groups = groupByType(allDescs);
-      // ensure common expected types are present so renderer receives expected buckets
       const required = ['lamp:left','lamp:right','tree'];
       for (const r of required) { if (!groups[r]) groups[r] = []; }
-
-      // iterate sorted keys for determinism in tests
-      const keys = Object.keys(groups).sort();
-      for (const type of keys) {
-        try { this.envRenderer.setInstances(type, groups[type] || []); } catch (e) { /* ignore per-pool errors */ }
-      }
+      // store planned groups (do not mutate renderer state here to avoid timing races)
+      this._plannedInstanceGroups = groups;
       return;
     } else if (this.polesLeft) {
       // update instances using per-segment positions (rough mapping)
@@ -945,4 +940,40 @@ export class RoadManager {
   setUseInstanceRenderer(v: boolean) { this.useInstanceRenderer = v; }
   
   setPhysicsAdapter(pa: any) { this.physicsAdapter = pa; }
+
+  // apply planned instance groups after physics has stepped and postPhysicsSync has run
+  postPhysicsSync() {
+    if (!this.envRenderer || !this.useInstanceRenderer) return;
+    try {
+      const groups = this._plannedInstanceGroups || {};
+      const keys = Object.keys(groups).sort();
+      // trigger GPU cull per-group if supported
+      if (GpuCuller.isSupported()) {
+        for (const typeKey of keys) {
+          const descs = groups[typeKey] || [];
+          (async (tk: string, dlist: RoadObjectDesc[]) => {
+            try {
+              const cam = this.cameraRef as any;
+              const visSet = await GpuCuller.cullAsync(dlist, cam);
+              if (visSet && this.envRenderer) {
+                this.envRenderer.setGPUVisibility(`${tk}|mid`, visSet);
+              }
+            } catch (e) {
+              // ignore per-group cull errors
+            }
+          })(typeKey, descs);
+        }
+      }
+      // hand off groups to renderer synchronously and update renderer
+      for (const type of keys) {
+        try { this.envRenderer.setInstances(type, groups[type] || []); } catch (e) { /* ignore */ }
+      }
+      try { this.envRenderer.update(this.cameraRef); } catch (e) { /* ignore */ }
+    } catch (e) {
+      // swallow errors to avoid affecting main loop
+    } finally {
+      // clear planned groups after application
+      this._plannedInstanceGroups = {};
+    }
+  }
 }
