@@ -28,6 +28,8 @@ describe('RoadManager InstanceRenderer integration', () => {
     rm.init(null, null);
     // call update at vehicleZ=0
     rm.update(0, 0, 0.016);
+    // apply planned instance groups as would happen after physics step
+    try { rm.postPhysicsSync(); } catch (e) {}
 
     expect(mockRenderer.setInstances).toHaveBeenCalled();
     // collect types passed
