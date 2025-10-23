@@ -13,8 +13,7 @@ import { VehicleProfile, DefaultCityCar } from './gameplay/VehicleProfile';
 import { AssetLoader } from './core/AssetLoader';
 import { InstanceRenderer } from './world/InstanceRenderer';
 import GpuCuller from './world/GpuCuller';
-import { RoadsideSpawner } from './world/RoadsideSpawner';
-import { EngineFactory } from './core/EngineFactory';
+import WebGpuCuller from './world/WebGpuCuller';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight,0.1,1000);
@@ -305,9 +304,30 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  (async () => {
  try {
  const ok = await GpuCuller.isWebGpuSupported();
- if (ok) console.log('WebGPU culler initialized'); else console.log('WebGPU not available');
+ if (ok) {
+ console.log('WebGPU culler initialized');
+ webgpuStatus.textContent = 'WebGPU: available (click details)';
+ try {
+ const adapter = (WebGpuCuller as any).adapter;
+ const device = (WebGpuCuller as any).device;
+ const features = adapter ? Array.from((adapter as any).features || []) : [];
+ const limits = adapter ? (adapter as any).limits || {} : {};
+ const info: any = {};
+ info.adapter = adapter ? (adapter as any).info || null : null;
+ info.features = features;
+ info.limits = limits;
+ info.device = !!device;
+ webgpuContent.textContent = JSON.stringify(info, null,2);
+ } catch (e) {
+ console.warn('Failed to read WebGPU adapter details', e);
+ }
+ } else {
+ console.log('WebGPU not available');
+ webgpuStatus.textContent = 'WebGPU: not available';
+ }
  } catch (e) {
  console.warn('WebGPU prewarm failed', e);
+ webgpuStatus.textContent = 'WebGPU: error';
  }
  })();
  } catch (e) {}
