@@ -417,6 +417,28 @@ modalPanel.appendChild(modalControls);
 modalOverlay.appendChild(modalPanel);
 document.body.appendChild(modalOverlay);
 
+// local storage key for persisted warnings/errors
+const WARNINGS_STORAGE_KEY = 'levelLoadWarnings';
+
+function saveWarningsToStorage(warns: string[] | undefined, errs: string[] | undefined) {
+ try {
+ const payload = { warnings: warns || [], errors: errs || [], updated: Date.now() };
+ localStorage.setItem(WARNINGS_STORAGE_KEY, JSON.stringify(payload));
+ } catch (e) { /* ignore storage errors */ }
+}
+
+function loadWarningsFromStorage() {
+ try {
+ const raw = localStorage.getItem(WARNINGS_STORAGE_KEY);
+ if (!raw) return null;
+ return JSON.parse(raw);
+ } catch (e) { return null; }
+}
+
+function clearStoredWarnings() {
+ try { localStorage.removeItem(WARNINGS_STORAGE_KEY); } catch (e) {}
+}
+
 // hook up show details and modal controls
 showDetailsBtn.onclick = () => { modalOverlay.style.display = 'flex'; };
 closeModalBtn.onclick = () => { modalOverlay.style.display = 'none'; };
@@ -426,206 +448,30 @@ clearWarningsBtn.onclick = () => {
  modalOverlay.style.display = 'none';
  loadStatus.textContent = 'Level: idle';
  loadStatus.style.color = 'white';
+ clearStoredWarnings();
 };
 
- ui.appendChild(startBtn); ui.appendChild(pauseBtn); ui.appendChild(prevLevelBtn); ui.appendChild(nextLevelBtn); ui.appendChild(modeSelect); ui.appendChild(exportTexturesBtn);
- ui.appendChild(loadStatus);
- ui.appendChild(warningsContainer);
- ui.appendChild(showDetailsBtn);
- ui.appendChild(irLabel);
- // --- Physics backend selector ---
- const physLabel = document.createElement('label');
- physLabel.style.display = 'block';
- physLabel.style.marginTop = '8px';
- physLabel.textContent = 'Physics backend:';
- const physSelect = document.createElement('select');
- const optFake = document.createElement('option'); optFake.value = 'fake'; optFake.text = 'FakePhysicsWorld';
- const optRapier = document.createElement('option'); optRapier.value = 'rapier'; optRapier.text = 'RapierPhysicsWorld';
- physSelect.appendChild(optFake); physSelect.appendChild(optRapier);
- physSelect.value = 'rapier';
- ui.appendChild(physLabel);
- ui.appendChild(physSelect);
- // physics status indicator
- const physStatus = document.createElement('div');
- physStatus.style.marginTop = '6px';
- physStatus.style.fontSize = '12px';
- physStatus.style.opacity = '0.9';
- physStatus.textContent = 'Physics: initializing...';
- ui.appendChild(physStatus);
- // Track selection
- const trackLabel = document.createElement('label');
- trackLabel.style.display = 'block';
- trackLabel.style.marginTop = '8px';
- trackLabel.textContent = 'Track:';
- const trackSelect = document.createElement('select');
- ui.appendChild(trackLabel);
- ui.appendChild(trackSelect);
- const bankLabel = document.createElement('div');
- bankLabel.style.fontSize = '12px';
- bankLabel.style.marginTop = '4px';
- bankLabel.textContent = 'Avg bank:0??';
- ui.appendChild(bankLabel);
- document.body.appendChild(ui);
-
- // switch physics backend at runtime
- function switchPhysics(mode: string) {
- // store previous state
- const prevState = (vehicle && typeof vehicle.getState === 'function') ? vehicle.getState() : null;
- try { if (vehicle && typeof vehicle.dispose === 'function') vehicle.dispose(); } catch (e) {}
- // create new physics world
- if (mode === 'rapier') {
- try { physicsWorld = new RapierPhysicsWorldImpl(); } catch (e) { console.warn('Failed to init Rapier, falling back to FakePhysicsWorld', e); physicsWorld = new FakePhysicsWorld(); }
- } else {
- physicsWorld = new FakePhysicsWorld();
+// On startup, load any persisted warnings/errors and show compact UI
+const persisted = loadWarningsFromStorage();
+if (persisted && ((persisted.warnings && persisted.warnings.length) || (persisted.errors && persisted.errors.length))) {
+ if (persisted.warnings && persisted.warnings.length) {
+ warningsContainer.innerHTML = '<b>Saved warnings:</b><br/>' + persisted.warnings.map((w: string) => `<div>- ${w}</div>`).join('');
+ modalContent.innerHTML = '<b>Saved warnings:</b><br/>' + persisted.warnings.map((w: string) => `<div>- ${w}</div>`).join('');
  }
- // recreate vehicle with same profile and params
- vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRadius: profile.wheelRadius, maxSteerAngle: profile.maxSteerAngle }, profile);
- // inject new physics instance into roadManager so chunks/collision sync
- try { if ((roadManager as any).setPhysics) (roadManager as any).setPhysics(physicsWorld); else (roadManager as any).physics = physicsWorld; } catch (e) {}
- if (prevState && typeof vehicle.reset === 'function') {
- try { vehicle.reset({ position: { x: prevState.position.x, y: prevState.position.y, z: prevState.position.z }, rotation: { x:0, y: prevState.rotation.y, z:0 } }); } catch (e) {}
+ if (persisted.errors && persisted.errors.length) {
+ warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Saved errors:</b></div>' + persisted.errors.map((e: string) => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ modalContent.innerHTML += '<div style="color:#ff6b6b"><b>Saved errors:</b></div>' + persisted.errors.map((e: string) => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
  }
- console.log('Switched physics to', mode);
- }
+ loadStatus.textContent = 'Level: idle (saved warnings)';
+ loadStatus.style.color = '#ffd966';
+}
 
- physSelect.onchange = () => switchPhysics(physSelect.value);
-
- // runtime control
- let running = true;
- startBtn.onclick = () => { running = true; };
- pauseBtn.onclick = () => { running = false; };
-
- // initialize repeat on material via roadManager
- try { roadManager.setTextureRepeat(roadConfig.textureRepeatY); } catch (e) {}
-
- let last = performance.now();
- let worldZ =0;
- function animate() {
- const now = performance.now();
- const dt = (now - last) /1000;
- last = now;
-
- input.update(dt);
- const urlParams = new URLSearchParams(window.location.search);
- const physicsDebug = urlParams.get('debug') === 'physics';
-
- if (running) {
- const vi = input.getInput();
- if (typeof vehicle !== 'undefined' && vehicle) {
- try { vehicle.setInput(vi); } catch (e) {}
- try { if (typeof physicsWorld.clearAppliedFlags === 'function') physicsWorld.clearAppliedFlags(); } catch (e) {}
- try { vehicle.update(dt); } catch (e) {}
- try { physicsWorld.step(dt); } catch (e) {}
- try { if (typeof vehicle.postPhysicsSync === 'function') (vehicle as any).postPhysicsSync(dt); } catch (e) {}
- // ensure RoadManager applies planned instance groups after physics step
- try { if (typeof (roadManager as any).postPhysicsSync === 'function') (roadManager as any).postPhysicsSync(); } catch (e) {}
- }
-
- if (physicsDebug) {
- try {
- console.groupCollapsed('PhysicsDebug');
- console.log('input', vi);
- console.log('vehicleState', vehicle ? vehicle.getState() : null);
- console.log('vehicle.input', vehicle ? vehicle.input : null);
- const backend = physicsWorld && physicsWorld.constructor && physicsWorld.constructor.name ? physicsWorld.constructor.name : 'unknown';
- const ready = physicsWorld && typeof physicsWorld.isReady === 'function' ? physicsWorld.isReady() : true;
- console.log('physics backend', backend, 'ready', ready);
- try {
- const phys: any = physicsWorld;
- if (phys && phys.bodies && vehicle && vehicle.bodyHandle != null) {
- const rec = phys.bodies.get(vehicle.bodyHandle);
- console.log('bodyRec', rec);
- try { const tf = phys.getBodyTransform(vehicle.bodyHandle); console.log('bodyTransform', tf); } catch (e) {}
- }
- } catch (e) {}
- console.groupEnd();
- } catch (e) { console.warn('physics debug failed', e); }
- }
-
- const s = (typeof vehicle !== 'undefined' && vehicle && typeof vehicle.getState === 'function') ? vehicle.getState() : { position: { x:0, y:0, z:0 }, rotation: { x:0,y:0,z:0 }, speed:0 };
-
- if ((carMesh as any).position) {
- (carMesh as any).position.x = s.position.x;
- (carMesh as any).position.y = Math.max(0.25, s.position.y);
- // use vehicle state z so forward motion is visible
- (carMesh as any).position.z = s.position.z;
- (carMesh as any).rotation.y = s.rotation.y;
- }
-
- const camTarget = new THREE.Vector3((carMesh as any).position.x, (carMesh as any).position.y +1.5, (carMesh as any).position.z +2);
- camera.position.lerp(new THREE.Vector3((carMesh as any).position.x, (carMesh as any).position.y +4, (carMesh as any).position.z -8),0.08);
- camera.lookAt(camTarget);
-
- // update worldZ
- try {
- const physReady = physicsWorld && typeof physicsWorld.isReady === 'function' ? physicsWorld.isReady() : false;
- const hasGetter = vehicle && typeof (vehicle as any).getTravelledDistance === 'function';
- if (physReady && hasGetter) {
- const travelled = (vehicle as any).getTravelledDistance();
- if (typeof travelled === 'number' && !isNaN(travelled)) {
- worldZ = travelled;
- } else {
- worldZ += (s.speed ||0) * dt;
- }
- } else {
- worldZ += (s.speed ||0) * dt;
- }
- } catch (e) {}
- try { roadManager.update(worldZ, s.speed, dt); } catch (e) {}
-
- try {
- roadConfig.roadOffset -= (s.speed ||0) * dt * roadConfig.scrollFactor;
- } catch (e) {}
-
- try {
- if (typeof sky !== 'undefined' && sky.position) sky.position.copy(camera.position);
- } catch (e) { /* ignore */ }
-
- try {
- const vs: VehicleStateSimple = {
- speed: (typeof vehicle !== 'undefined' && vehicle && typeof vehicle.getState === 'function') ? vehicle.getState().speed :0,
- throttle: (typeof vehicle !== 'undefined' && vehicle) ? vehicle.input?.throttle ??0 :0,
- brakePressure: (typeof vehicle !== 'undefined' && vehicle) ? vehicle.brakePressure ??0 :0,
- steer: (typeof vehicle !== 'undefined' && vehicle) ? vehicle.input?.steer ??0 :0,
- rpm: (typeof vehicle !== 'undefined' && vehicle) ? vehicle.getState().rpm ??0 :0
- };
- if (animController) animController.update(dt, vs);
- } catch (e) {}
-
- hud.innerHTML = `Speed: ${ (s.speed).toFixed(2) } m/s`;
- try {
- const backend = physicsWorld && physicsWorld.constructor && physicsWorld.constructor.name ? physicsWorld.constructor.name : (physSelect ? physSelect.value : 'unknown');
- const ready = physicsWorld && typeof physicsWorld.isReady === 'function' ? physicsWorld.isReady() : true;
- physStatus.textContent = `Physics: ${backend} ${ready ? '(ready)' : '(initializing)'}`;
- physStatus.style.color = ready ? 'lightgreen' : 'orange';
- } catch (e) { /* ignore UI update errors */ }
- }
-
- renderer.render(scene, camera);
- requestAnimationFrame(animate);
- }
-
- animate();
-
- // load initial level just before first animate call (ensure vehicle exists)
- // simple level loader using predefined list
- const levels = [
- { id: 'city', sceneUrl: '/assets/levels/level_city.json' },
- { id: 'canyon', sceneUrl: '/assets/levels/level_canyon.json' }
- ];
- async function loadLevel(idx: number) {
- try {
- const lvlUrl = levels[Math.max(0, Math.min(idx, levels.length -1))].sceneUrl;
- // UI: show loading status
- loadStatus.textContent = `Level: loading ${lvlUrl}...`;
- warningsContainer.innerHTML = '';
- const ctx = { scene, vehicle, carMeshRef: { value: carMesh }, gltfLoader, assetLoader, spawner };
- const res = await engineFactory.loadAndApplyLevel(lvlUrl, ctx);
- console.log('Loaded level result', res);
-
+// ...later in loadLevel after receiving res and updating UI...
+// (replace the existing block that updates warningsContainer/modalContent)
  if (res.warnings && res.warnings.length) {
  warningsContainer.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
  modalContent.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
+ saveWarningsToStorage(res.warnings, res.errors);
  } else {
  warningsContainer.innerHTML = '';
  }
@@ -634,6 +480,39 @@ clearWarningsBtn.onclick = () => {
  // show errors in red
  warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
  modalContent.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ saveWarningsToStorage(res.warnings, res.errors);
+ }
+
+async function loadLevel(idx: number) {
+ try {
+ const lvlUrl = levels[Math.max(0, Math.min(idx, levels.length -1))].sceneUrl;
+ // UI: show loading status
+ loadStatus.textContent = `Level: loading ${lvlUrl}...`;
+ loadStatus.style.color = 'white';
+ warningsContainer.innerHTML = '';
+ modalContent.innerHTML = '';
+
+ const ctx = { scene, vehicle, carMeshRef: { value: carMesh }, gltfLoader, assetLoader, spawner };
+ const res = await engineFactory.loadAndApplyLevel(lvlUrl, ctx);
+ console.log('Loaded level result', res);
+
+ // update UI and persist warnings/errors
+ if (res.warnings && res.warnings.length) {
+ warningsContainer.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
+ modalContent.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
+ } else {
+ warningsContainer.innerHTML = '';
+ modalContent.innerHTML = '';
+ }
+
+ if (res.errors && res.errors.length) {
+ warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ modalContent.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ }
+
+ // persist to storage if any warnings/errors
+ if ((res.warnings && res.warnings.length) || (res.errors && res.errors.length)) {
+ saveWarningsToStorage(res.warnings, res.errors);
  }
 
  if (res.partial) {
@@ -657,11 +536,14 @@ clearWarningsBtn.onclick = () => {
  loadStatus.textContent = `Level: failed to load`;
  loadStatus.style.color = '#ff6b6b';
  warningsContainer.innerHTML = `<div style="color:#ff6b6b">${e?.message ?? String(e)}</div>`;
+ modalContent.innerHTML = warningsContainer.innerHTML;
+ saveWarningsToStorage([], [e?.message ?? String(e)]);
+ modalOverlay.style.display = 'flex';
  }
- }
+}
 
- // Load available tracks from assets/tracks (simple fetch on JSON files)
- async function loadTracks() {
+// Load available tracks from assets/tracks (simple fetch on JSON files)
+async function loadTracks() {
  const list = ['desert_run.json', 'canyon_circuit.json'];
  for (const name of list) {
  try {
@@ -676,10 +558,10 @@ clearWarningsBtn.onclick = () => {
  }
  // default select first
  if (trackSelect.options.length >0) trackSelect.selectedIndex =0;
- }
- loadTracks();
+}
+loadTracks();
 
- trackSelect.onchange = async () => {
+trackSelect.onchange = async () => {
  const file = trackSelect.value;
  try {
  const res = await fetch(`/assets/tracks/${file}`);
@@ -692,31 +574,30 @@ clearWarningsBtn.onclick = () => {
  if (j.bakedSceneryUrl && spawner && typeof (spawner as any).loadBakedFromUrl === 'function') {
  try { await (spawner as any).loadBakedFromUrl(j.bakedSceneryUrl, resources); console.log('Loaded baked scenery from track', j.bakedSceneryUrl); } catch (e) { console.warn('Failed to load baked scenery from track', e); }
  }
- } catch (e) {}
+ } catch (e) { }
  // display average bank in degrees
  try {
  const cps = j.controlPoints || [];
  if (cps.length >0) {
- const avg = cps.reduce((s:any,p:any)=>s + (p.bank ||0),0) / cps.length;
- bankLabel.textContent = `Avg bank: ${avg.toFixed(2)}??`;
+ const avg = cps.reduce((s: any, p: any) => s + (p.bank ||0),0) / cps.length;
+ bankLabel.textContent = `Avg bank: ${avg.toFixed(2)}бу`;
  } else {
- bankLabel.textContent = 'Avg bank:0??';
+ bankLabel.textContent = 'Avg bank:0бу';
  }
- } catch(e){}
+ } catch (e) { }
  // reset vehicle to start position if provided
  if (j.startPositions && j.startPositions[0]) {
  const sp = j.startPositions[0];
- try { vehicle.reset({ position: { x: sp.position[0], y: sp.position[1], z: sp.position[2] }, rotation: { x:0, y: sp.rotation[1] ||0, z:0 } }); } catch (e) {}
+ try { vehicle.reset({ position: { x: sp.position[0], y: sp.position[1], z: sp.position[2] }, rotation: { x:0, y: sp.rotation[1] ||0, z:0 } }); } catch (e) { }
  }
  } catch (e) { console.warn('Failed to load track', e); }
- };
+};
 
- window.addEventListener('resize', () => {
+window.addEventListener('resize', () => {
  camera.aspect = window.innerWidth / window.innerHeight;
  camera.updateProjectionMatrix();
  renderer.setSize(window.innerWidth, window.innerHeight);
- });
+});
 })();
-
 
 // end of file
