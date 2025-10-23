@@ -26,8 +26,9 @@ export class InstanceRenderer {
   } = { frameTs: null, totalInstances: 0, drawCalls: 0, byType: {} };
   // active GPU-visible sets applied this frame
   private _gpuVisibleMap: Map<string, Set<number>> = new Map();
-  // pending GPU-visible sets written by async GPU cullers (double-buffer)
-  private _gpuVisiblePending: Map<string, Set<number>> = new Map();
+  // double-buffered pending GPU-visible sets: writers write to _gpuVisiblePendingWrite; update() swaps to _gpuVisibleApply
+  private _gpuVisiblePendingWrite: Map<string, Set<number>> = new Map();
+  private _gpuVisibleApply: Map<string, Set<number>> = new Map();
 
   init(scene: THREE.Scene, assetLoader: IAssetLoader, lodConfig?: { near:number; mid:number; far:number }) {
     this.scene = scene;
@@ -238,12 +239,16 @@ export class InstanceRenderer {
 
   update(camera: THREE.Camera) {
     // Apply pending GPU visibility updates at start of frame (double-buffer swap)
-    if (this._gpuVisiblePending.size > 0) {
-      // swap pending into active
-      for (const [k, v] of this._gpuVisiblePending) {
+    if (this._gpuVisiblePendingWrite.size >0) {
+      // swap write -> apply
+      this._gpuVisibleApply = this._gpuVisiblePendingWrite;
+      this._gpuVisiblePendingWrite = new Map();
+      // replace active map entirely with apply contents to avoid stale entries
+      this._gpuVisibleMap = new Map();
+      for (const [k, v] of this._gpuVisibleApply) {
         this._gpuVisibleMap.set(k, v);
       }
-      this._gpuVisiblePending.clear();
+      this._gpuVisibleApply.clear();
     }
     if (!camera) return;
     // build frustum
@@ -329,8 +334,8 @@ export class InstanceRenderer {
   // Allow external GPU culling pass to provide visible instance indices for a poolKey
   setGPUVisibility(poolKey: string, visibleIndices: number[] | Set<number>) {
     const s = visibleIndices instanceof Set ? visibleIndices : new Set<number>(visibleIndices);
-    // write to pending buffer to avoid in-frame races; will be applied at start of next update
-    this._gpuVisiblePending.set(poolKey, s);
+    // write to the write buffer to avoid races; will be swapped into active map at start of next update
+    this._gpuVisiblePendingWrite.set(poolKey, s);
   }
 
   clearGPUVisibility(poolKey: string) {

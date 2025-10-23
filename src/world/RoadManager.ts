@@ -85,8 +85,10 @@ export class RoadManager {
   private envRenderer: InstanceRenderer | null = null;
   // Optional spawner reference (PR-4a)
   private spawner: RoadsideSpawner | null = null;
-  // planned instance groups produced by update() and applied in postPhysicsSync()
-  private _plannedInstanceGroups: Record<string, RoadObjectDesc[]> = {};
+  // double-buffered planned instance groups: write buffer is written by update(); apply buffer is consumed by postPhysicsSync()
+  private _plannedGroupsWrite: Record<string, RoadObjectDesc[]> = {};
+  private _plannedGroupsApply: Record<string, RoadObjectDesc[]> = {};
+  private _applyingPlannedGroups: boolean = false;
   // feature flag to use InstanceRenderer path
   private useInstanceRenderer: boolean = true;
   // physics adapter integration
@@ -486,8 +488,8 @@ export class RoadManager {
       const groups = groupByType(allDescs);
       const required = ['lamp:left','lamp:right','tree'];
       for (const r of required) { if (!groups[r]) groups[r] = []; }
-      // store planned groups (do not mutate renderer state here to avoid timing races)
-      this._plannedInstanceGroups = groups;
+      // store planned groups into write buffer (do not mutate renderer state here to avoid timing races)
+      this._plannedGroupsWrite = groups;
       return;
     } else if (this.polesLeft) {
       // update instances using per-segment positions (rough mapping)
@@ -942,38 +944,81 @@ export class RoadManager {
   setPhysicsAdapter(pa: any) { this.physicsAdapter = pa; }
 
   // apply planned instance groups after physics has stepped and postPhysicsSync has run
-  postPhysicsSync() {
+  async postPhysicsSync(): Promise<void> {
     if (!this.envRenderer || !this.useInstanceRenderer) return;
+    // avoid reentrant application
+    if (this._applyingPlannedGroups) return;
+    this._applyingPlannedGroups = true;
     try {
-      const groups = this._plannedInstanceGroups || {};
-      const keys = Object.keys(groups).sort();
-      // trigger GPU cull per-group if supported
-      if (GpuCuller.isSupported()) {
-        for (const typeKey of keys) {
-          const descs = groups[typeKey] || [];
-          (async (tk: string, dlist: RoadObjectDesc[]) => {
-            try {
-              const cam = this.cameraRef as any;
-              const visSet = await GpuCuller.cullAsync(dlist, cam);
-              if (visSet && this.envRenderer) {
-                this.envRenderer.setGPUVisibility(`${tk}|mid`, visSet);
-              }
-            } catch (e) {
-              // ignore per-group cull errors
-            }
-          })(typeKey, descs);
+      // choose source buffer: prefer write buffer (written by update); if empty, fall back to spawner
+      let groups: Record<string, RoadObjectDesc[]> = (this._plannedGroupsWrite && Object.keys(this._plannedGroupsWrite).length >0)
+      ? this._plannedGroupsWrite
+      : (this._plannedGroupsApply && Object.keys(this._plannedGroupsApply).length >0 ? this._plannedGroupsApply : {});
+      // reset write buffer for next frame
+      this._plannedGroupsWrite = {};
+      // if still empty, try to read directly from spawner (useful for unit tests)
+      if (!groups || Object.keys(groups).length ===0) {
+        try {
+          const allDescs: RoadObjectDesc[] = this.spawner ? this.spawner.getActiveDescs() : [];
+          const gb = groupByType(allDescs);
+          const required = ['lamp:left', 'lamp:right', 'tree'];
+          for (const r of required) { if (!gb[r]) gb[r] = []; }
+          groups = gb;
+        } catch (e) {
+          groups = {};
         }
       }
-      // hand off groups to renderer synchronously and update renderer
+
+      // ensure apply buffer references chosen groups for bookkeeping
+      this._plannedGroupsApply = groups;
+      const keys = Object.keys(groups).sort();
+
+      // hand off groups to renderer synchronously and update renderer so callers observing synchronously see the change
       for (const type of keys) {
         try { this.envRenderer.setInstances(type, groups[type] || []); } catch (e) { /* ignore */ }
       }
       try { this.envRenderer.update(this.cameraRef); } catch (e) { /* ignore */ }
+
+      // If GPU culler supported, dispatch async culls per-group (they will write into renderer pending buffer)
+      const cullPromises: Promise<any>[] = [];
+      if (GpuCuller.isSupported()) {
+        for (const typeKey of keys) {
+          const descs = groups[typeKey] || [];
+          try {
+            const cam = this.cameraRef as any;
+            const p = (async () => {
+              try {
+                const visSet = await GpuCuller.cullAsync(descs, cam);
+                if (visSet && this.envRenderer) {
+                  this.envRenderer.setGPUVisibility(`${typeKey}|mid`, visSet);
+                }
+              } catch (e) {
+                // ignore per-group cull errors
+              }
+            })();
+            cullPromises.push(p);
+          } catch (e) {
+            // ignore dispatch errors
+          }
+        }
+      }
+
+      // wait for culls to complete but don't block more than a frame budget (~16ms)
+      if (cullPromises.length >0) {
+        const timeout = new Promise(resolve => setTimeout(resolve,16));
+        try {
+          await Promise.race([Promise.allSettled(cullPromises), timeout]);
+        } catch (e) {
+          // ignore
+        }
+      }
     } catch (e) {
       // swallow errors to avoid affecting main loop
     } finally {
       // clear planned groups after application
-      this._plannedInstanceGroups = {};
+      this._plannedGroupsApply = {};
+      this._plannedGroupsWrite = {};
+      this._applyingPlannedGroups = false;
     }
   }
 }

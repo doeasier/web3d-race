@@ -357,8 +357,25 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
   irLabel.style.marginTop = '8px';
   const irCheckbox = document.createElement('input');
   irCheckbox.type = 'checkbox';
-  irCheckbox.checked = true;
-  irCheckbox.onchange = () => { try { roadManager.setUseInstanceRenderer(irCheckbox.checked); } catch(e){} };
+  // initialize from URL param or localStorage
+  try {
+  const urlParams = new URLSearchParams(window.location.search);
+  const param = urlParams.get('useInstanceRenderer');
+  let initial = true;
+  if (param !== null) {
+  initial = param !== '0' && param !== 'false';
+  } else {
+  const stored = localStorage.getItem('useInstanceRenderer');
+  if (stored !== null) initial = stored !== '0' && stored !== 'false';
+  }
+  irCheckbox.checked = initial;
+  try { roadManager.setUseInstanceRenderer(initial); } catch (e) {}
+  } catch (e) { irCheckbox.checked = true; }
+  irCheckbox.onchange = () => {
+  try { roadManager.setUseInstanceRenderer(irCheckbox.checked); } catch(e){}
+  try { localStorage.setItem('useInstanceRenderer', irCheckbox.checked ? '1' : '0'); } catch (e) {}
+  };
+
   irLabel.appendChild(irCheckbox);
   irLabel.appendChild(document.createTextNode(' Use InstanceRenderer'));
 
@@ -546,7 +563,7 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
   ];
   async function loadLevel(idx: number) {
     try {
-      const lvl = await resources.loadJson(levels[Math.max(0, Math.min(idx, levels.length - 1))].sceneUrl);
+      const lvl = await resources.loadJson(levels[Math.max(0, Math.min(idx, levels.length -1))].sceneUrl);
       console.log('Loaded level', lvl);
       // position car at start if provided
       if (lvl.startPositions && lvl.startPositions[0]) {
@@ -575,6 +592,12 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
           }
         } catch (e) { console.warn('Failed to load glTF car model', e); }
       }
+      // load baked scenery into spawner if provided
+      try {
+      if (lvl.bakedSceneryUrl && spawner && typeof (spawner as any).loadBakedFromUrl === 'function') {
+      try { await (spawner as any).loadBakedFromUrl(lvl.bakedSceneryUrl, resources); console.log('Loaded baked scenery', lvl.bakedSceneryUrl); } catch (e) { console.warn('Failed to load baked scenery', e); }
+      }
+      } catch (e) {}
     } catch (e) {
       console.error('Failed to load level', e);
     }
@@ -606,8 +629,14 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
       const res = await fetch(`/assets/tracks/${file}`);
       const j = await res.json();
       if (j.controlPoints) {
-        roadManager.applyControlPoints(j.controlPoints, 500);
+        roadManager.applyControlPoints(j.controlPoints,500);
       }
+      // load baked scenery if specified in track file
+      try {
+      if (j.bakedSceneryUrl && spawner && typeof (spawner as any).loadBakedFromUrl === 'function') {
+      try { await (spawner as any).loadBakedFromUrl(j.bakedSceneryUrl, resources); console.log('Loaded baked scenery from track', j.bakedSceneryUrl); } catch (e) { console.warn('Failed to load baked scenery from track', e); }
+      }
+      } catch (e) {}
       // display average bank in degrees
       try {
         const cps = j.controlPoints || [];
