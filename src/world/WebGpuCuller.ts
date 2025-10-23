@@ -15,59 +15,70 @@ export class WebGpuCuller {
   maxInstances: number = 0;
 
   async init(maxInstances = 65536) {
-    if (!('gpu' in navigator)) return false;
-    this.maxInstances = maxInstances;
-    this.adapter = await (navigator as any).gpu.requestAdapter();
-    if (!this.adapter) return false;
-    this.device = await this.adapter.requestDevice();
+    try {
+      console.log('WebGpuCuller.init: navigator present?', typeof navigator !== 'undefined');
+      console.log('WebGpuCuller.init: navigator.gpu present?', typeof navigator !== 'undefined' && 'gpu' in navigator);
+      if (!('gpu' in navigator)) return false;
+      this.maxInstances = maxInstances;
+      this.adapter = await (navigator as any).gpu.requestAdapter();
+      console.log('WebGpuCuller.init: adapter=', this.adapter);
+      if (!this.adapter) return false;
+      this.device = await this.adapter.requestDevice();
+      console.log('WebGpuCuller.init: device=', this.device);
+      if (!this.device) return false;
 
-    const posSize = maxInstances * 4 * 4; // vec4 f32
-    const indexSize = maxInstances * 4; // u32 per index
-    const counterSize = 4; // single u32
-    const BU = (this.device as any).GPUBufferUsage;
-    this.posBuffer = this.device.createBuffer({ size: posSize, usage: BU.STORAGE | BU.COPY_DST });
-    this.indexBuffer = this.device.createBuffer({ size: indexSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
-    this.counterBuffer = this.device.createBuffer({ size: counterSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
-    this.readbackIndex = this.device.createBuffer({ size: indexSize, usage: BU.COPY_DST | BU.MAP_READ });
-    this.readbackCounter = this.device.createBuffer({ size: counterSize, usage: BU.COPY_DST | BU.MAP_READ });
-    this.uniBuffer = this.device.createBuffer({ size: 80, usage: BU.UNIFORM | BU.COPY_DST });
+      const posSize = maxInstances * 4 * 4; // vec4 f32
+      const indexSize = maxInstances * 4; // u32 per index
+      const counterSize = 4; // single u32
+      const BU = (this.device as any).GPUBufferUsage;
+      this.posBuffer = this.device.createBuffer({ size: posSize, usage: BU.STORAGE | BU.COPY_DST });
+      this.indexBuffer = this.device.createBuffer({ size: indexSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
+      this.counterBuffer = this.device.createBuffer({ size: counterSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
+      this.readbackIndex = this.device.createBuffer({ size: indexSize, usage: BU.COPY_DST | BU.MAP_READ });
+      this.readbackCounter = this.device.createBuffer({ size: counterSize, usage: BU.COPY_DST | BU.MAP_READ });
+      this.uniBuffer = this.device.createBuffer({ size: 80, usage: BU.UNIFORM | BU.COPY_DST });
 
-    const shader = `
-    struct Pos { x: f32; y: f32; z: f32; w: f32; };
-    struct Mat4 { m: array<f32,16>; };
-    @group(0) @binding(0) var<storage, read> positions: array<Pos>;
-    @group(0) @binding(1) var<storage, read_write> indices: array<u32>;
-    @group(0) @binding(2) var<storage, read_write> counter: array<atomic<u32>>;
-    @group(0) @binding(3) var<uniform> pv: Mat4;
-    @group(0) @binding(4) var<uniform> meta: vec4<f32>; // x: count
+      const shader = `
+      struct Pos { x: f32; y: f32; z: f32; w: f32; };
+      struct Mat4 { m: array<f32,16>; };
+      @group(0) @binding(0) var<storage, read> positions: array<Pos>;
+      @group(0) @binding(1) var<storage, read_write> indices: array<u32>;
+      @group(0) @binding(2) var<storage, read_write> counter: array<atomic<u32>>;
+      @group(0) @binding(3) var<uniform> pv: Mat4;
+      @group(0) @binding(4) var<uniform> meta: vec4<f32>; // x: count
 
-    fn pointInFrustum(px: f32, py: f32, pz: f32) -> u32 {
-      var clipX = pv.m[0]*px + pv.m[4]*py + pv.m[8]*pz + pv.m[12]*1.0;
-      var clipY = pv.m[1]*px + pv.m[5]*py + pv.m[9]*pz + pv.m[13]*1.0;
-      var clipZ = pv.m[2]*px + pv.m[6]*py + pv.m[10]*pz + pv.m[14]*1.0;
-      var clipW = pv.m[3]*px + pv.m[7]*py + pv.m[11]*pz + pv.m[15]*1.0;
-      if (clipW == 0.0) { return 0u; }
-      if (abs(clipX) <= clipW && abs(clipY) <= clipW && clipZ >= -clipW && clipZ <= clipW) { return 1u; }
-      return 0u;
-    }
-
-    @compute @workgroup_size(64)
-    fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
-      let idx = gid.x;
-      if (idx >= u32(meta.x)) { return; }
-      let p = positions[idx];
-      let vis = pointInFrustum(p.x, p.y, p.z);
-      if (vis == 1u) {
-        let pos = atomicAdd(&counter[0], 1u);
-        indices[pos] = idx;
+      fn pointInFrustum(px: f32, py: f32, pz: f32) -> u32 {
+        var clipX = pv.m[0]*px + pv.m[4]*py + pv.m[8]*pz + pv.m[12]*1.0;
+        var clipY = pv.m[1]*px + pv.m[5]*py + pv.m[9]*pz + pv.m[13]*1.0;
+        var clipZ = pv.m[2]*px + pv.m[6]*py + pv.m[10]*pz + pv.m[14]*1.0;
+        var clipW = pv.m[3]*px + pv.m[7]*py + pv.m[11]*pz + pv.m[15]*1.0;
+        if (clipW == 0.0) { return 0u; }
+        if (abs(clipX) <= clipW && abs(clipY) <= clipW && clipZ >= -clipW && clipZ <= clipW) { return 1u; }
+        return 0u;
       }
-    }
-    `;
 
-    const module = this.device.createShaderModule({ code: shader });
-    this.pipeline = this.device.createComputePipeline({ layout: 'auto', compute: { module, entryPoint: 'main' } });
-    this.bindGroupLayout = this.pipeline.getBindGroupLayout(0);
-    return true;
+      @compute @workgroup_size(64)
+      fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+        let idx = gid.x;
+        if (idx >= u32(meta.x)) { return; }
+        let p = positions[idx];
+        let vis = pointInFrustum(p.x, p.y, p.z);
+        if (vis == 1u) {
+          let pos = atomicAdd(&counter[0], 1u);
+          indices[pos] = idx;
+        }
+      }
+      `;
+
+      const module = this.device.createShaderModule({ code: shader });
+      this.pipeline = this.device.createComputePipeline({ layout: 'auto', compute: { module, entryPoint: 'main' } });
+      this.bindGroupLayout = this.pipeline.getBindGroupLayout(0);
+      console.log('WebGpuCuller.init: initialized successfully');
+      return true;
+    } catch (err) {
+      console.warn('WebGpuCuller.init error:', err);
+      return false;
+    }
   }
 
   isSupported() {
