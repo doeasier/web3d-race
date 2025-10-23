@@ -528,6 +528,14 @@ async function loadLevel(idx: number) {
 // Load available tracks from assets/tracks (simple fetch on JSON files)
 async function loadTracks() {
  const list = ['desert_run.json', 'canyon_circuit.json'];
+ // find or create select element by id to be robust against ordering
+ let select: HTMLSelectElement | null = document.getElementById('trackSelect') as HTMLSelectElement | null;
+ if (!select) {
+ select = document.createElement('select');
+ select.id = 'trackSelect';
+ // append near end of UI
+ try { ui.appendChild(select); } catch (e) { document.body.appendChild(select); }
+ }
  for (const name of list) {
  try {
  const res = await fetch(`/assets/tracks/${name}`);
@@ -536,16 +544,20 @@ async function loadTracks() {
  const opt = document.createElement('option');
  opt.value = name;
  opt.text = `${j.name} (${j.recommendedMode || 'mixed'})`;
- trackSelect.appendChild(opt);
+ select.appendChild(opt);
  } catch (e) { }
  }
  // default select first
- if (trackSelect.options.length >0) trackSelect.selectedIndex =0;
+ if (select.options.length >0) select.selectedIndex =0;
 }
 loadTracks();
 
-trackSelect.onchange = async () => {
- const file = trackSelect.value;
+// update trackSelect.onchange usage later to reference element by id
+const trackSelectElem = () => document.getElementById('trackSelect') as HTMLSelectElement | null;
+(trackSelectElem() as any).onchange = async () => {
+ const select = trackSelectElem();
+ if (!select) return;
+ const file = select.value;
  try {
  const res = await fetch(`/assets/tracks/${file}`);
  const j = await res.json();
