@@ -1,0 +1,99 @@
+{
+  "id": "sports_coupe_01",
+  "displayName": "Sports Coupe",
+  "displayNameZh": "运动跑车",
+  "description": "High performance sports car with excellent handling",
+  "descriptionZh": "高性能运动跑车，操控卓越",
+  "category": "sports",
+  "modelPath": "/assets/models/car2.glb",
+  "thumbnailPath": "/assets/thumbnails/sports_coupe_01.png",
+  "physics": {
+ "mass": 1400,
+    "wheelRadius": 0.35,
+    "wheelInertia": 0.7,
+    "centerOfMassOffset": [0, -0.15, 0],
+    "dragCoefficient": 0.28,
+    "rollingResistance": 0.012
+  },
+  "steering": {
+    "maxSteerAngle": 32,
+    "steerSpeed": 3.0,
+    "returnSpeed": 3.5,
+    "minSpeed": 0.5
+  },
+  "acceleration": {
+    "maxAccel": 8.5,
+    "throttleResponse": 1.5,
+    "reverseAccel": 4.0,
+    "maxSpeed": 80,
+    "maxReverseSpeed": 20,
+ "torqueCurve": [
+      {"rpm": 0, "torque": 0.4},
+    {"rpm": 2000, "torque": 0.8},
+      {"rpm": 4000, "torque": 1.0},
+      {"rpm": 6000, "torque": 0.95},
+      {"rpm": 8000, "torque": 0.7}
+    ]
+  },
+  "braking": {
+    "a_light": 4.5,
+ "a_heavy": 10.5,
+    "longPressThresholdMs": 250,
+    "rampUpTimeMs": 600,
+  "absEnabled": true,
+    "brakeBias": 0.65
+  },
+  "engine": {
+    "nominalRpm": 4000,
+    "idleRpm": 900,
+  "maxRpm": 8500,
+    "redlineRpm": 8000,
+    "rpmIncreaseRate": 2500,
+    "rpmDecreaseRate": 1800
+  },
+  "suspension": {
+    "stiffness": 50000,
+    "damping": 2500,
+    "travel": 0.15,
+    "compression": 0.9,
+  "rebound": 0.7
+  },
+  "animations": {
+    "idle": "Idle",
+    "drive_slow": "DriveSlow",
+    "drive_fast": "DriveFast",
+    "brake": "Brake",
+    "steer": "Steer",
+    "wheelRotation": "WheelRotation"
+  },
+  "audio": {
+    "engine": {
+      "idle": "/assets/audio/engine_sports_idle.mp3",
+"low": "/assets/audio/engine_sports_low.mp3",
+      "mid": "/assets/audio/engine_sports_mid.mp3",
+      "high": "/assets/audio/engine_sports_high.mp3"
+    },
+    "effects": {
+      "brake": "/assets/audio/brake_screech.mp3",
+      "horn": "/assets/audio/horn_sports.mp3"
+    }
+  },
+  "visual": {
+    "bodyColor": "#E63946",
+    "wheelColor": "#1A1A1A",
+    "glassOpacity": 0.2,
+    "brakeLightIntensity": 2.5,
+    "headlightIntensity": 2.0
+  },
+  "unlockRequirements": {
+    "level": 5,
+ "currency": 5000
+  },
+  "stats": {
+    "acceleration": 90,
+    "topSpeed": 95,
+    "handling": 88,
+    "braking": 92,
+    "durability": 75
+  }
+}

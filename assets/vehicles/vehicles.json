@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "vehicles": [
+    "city_car_01.json",
+    "sports_coupe_01.json",
+    "suv_offroad_01.json"
+  ],
+  "defaultVehicle": "city_car_01",
+  "categories": {
+    "compact": {
+      "name": "Compact",
+   "nameZh": "紧凑型",
+      "description": "Small, agile vehicles perfect for city driving"
+    },
+    "sports": {
+  "name": "Sports",
+    "nameZh": "运动型",
+ "description": "High-performance vehicles with excellent acceleration"
+    },
+    "suv": {
+      "name": "SUV",
+      "nameZh": "SUV",
+      "description": "Versatile vehicles suitable for all terrains"
+    },
+    "luxury": {
+      "name": "Luxury",
+      "nameZh": "豪华型",
+      "description": "Premium vehicles with top-tier comfort and features"
+    },
+    "racing": {
+      "name": "Racing",
+      "nameZh": "竞速型",
+    "description": "Pure racing machines built for speed"
+    }
+  }
+}

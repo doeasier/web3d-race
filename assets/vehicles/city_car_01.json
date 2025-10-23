@@ -1,0 +1,99 @@
+{
+  "id": "city_car_01",
+  "displayName": "City Compact",
+  "displayNameZh": "城市小车",
+  "description": "Agile and efficient for city driving",
+  "descriptionZh": "灵活高效的城市代步车",
+  "category": "compact",
+  "modelPath": "/assets/models/car1.glb",
+  "thumbnailPath": "/assets/thumbnails/city_car_01.png",
+  "physics": {
+ "mass": 1200,
+    "wheelRadius": 0.3,
+    "wheelInertia": 0.5,
+    "centerOfMassOffset": [0, -0.2, 0],
+    "dragCoefficient": 0.32,
+    "rollingResistance": 0.015
+  },
+  "steering": {
+  "maxSteerAngle": 35,
+    "steerSpeed": 2.5,
+    "returnSpeed": 3.0,
+    "minSpeed": 0.5
+  },
+  "acceleration": {
+    "maxAccel": 5.5,
+    "throttleResponse": 1.2,
+ "reverseAccel": 3.0,
+    "maxSpeed": 50,
+    "maxReverseSpeed": 15,
+    "torqueCurve": [
+      {"rpm": 0, "torque": 0.3},
+      {"rpm": 1500, "torque": 0.7},
+      {"rpm": 3000, "torque": 1.0},
+      {"rpm": 5000, "torque": 0.9},
+      {"rpm": 7000, "torque": 0.6}
+    ]
+  },
+  "braking": {
+    "a_light": 3.5,
+    "a_heavy": 9.0,
+    "longPressThresholdMs": 300,
+    "rampUpTimeMs": 700,
+    "absEnabled": true,
+    "brakeBias": 0.6
+  },
+  "engine": {
+    "nominalRpm": 3000,
+    "idleRpm": 800,
+  "maxRpm": 7000,
+    "redlineRpm": 6500,
+    "rpmIncreaseRate": 2000,
+    "rpmDecreaseRate": 1500
+  },
+  "suspension": {
+    "stiffness": 40000,
+    "damping": 2000,
+    "travel": 0.2,
+    "compression": 0.8,
+    "rebound": 0.6
+  },
+  "animations": {
+ "idle": "Idle",
+    "drive_slow": "DriveSlow",
+    "drive_fast": "DriveFast",
+    "brake": "Brake",
+    "steer": "Steer",
+    "wheelRotation": "WheelRotation"
+  },
+  "audio": {
+    "engine": {
+      "idle": "/assets/audio/engine_idle.mp3",
+      "low": "/assets/audio/engine_low.mp3",
+      "mid": "/assets/audio/engine_mid.mp3",
+      "high": "/assets/audio/engine_high.mp3"
+    },
+    "effects": {
+   "brake": "/assets/audio/brake_screech.mp3",
+      "horn": "/assets/audio/horn.mp3"
+ }
+  },
+  "visual": {
+    "bodyColor": "#FF6B35",
+    "wheelColor": "#2C2C2C",
+    "glassOpacity": 0.3,
+    "brakeLightIntensity": 2.0,
+    "headlightIntensity": 1.5
+  },
+  "unlockRequirements": {
+    "level": 1,
+    "currency": 0
+  },
+  "stats": {
+    "acceleration": 75,
+    "topSpeed": 70,
+    "handling": 85,
+ "braking": 80,
+    "durability": 70
+  }
+}

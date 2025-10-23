@@ -1,0 +1,99 @@
+{
+  "id": "suv_offroad_01",
+  "displayName": "Off-Road SUV",
+  "displayNameZh": "越野SUV",
+  "description": "Robust SUV built for all terrains",
+  "descriptionZh": "坚固耐用的全地形SUV",
+  "category": "suv",
+  "modelPath": "/assets/models/car3.glb",
+  "thumbnailPath": "/assets/thumbnails/suv_offroad_01.png",
+"physics": {
+    "mass": 2000,
+    "wheelRadius": 0.4,
+  "wheelInertia": 1.0,
+    "centerOfMassOffset": [0, 0.1, 0],
+    "dragCoefficient": 0.38,
+    "rollingResistance": 0.02
+  },
+  "steering": {
+ "maxSteerAngle": 38,
+    "steerSpeed": 2.0,
+    "returnSpeed": 2.5,
+  "minSpeed": 0.5
+  },
+  "acceleration": {
+    "maxAccel": 4.5,
+    "throttleResponse": 0.9,
+    "reverseAccel": 2.5,
+    "maxSpeed": 45,
+    "maxReverseSpeed": 12,
+ "torqueCurve": [
+      {"rpm": 0, "torque": 0.5},
+      {"rpm": 1000, "torque": 0.9},
+      {"rpm": 2500, "torque": 1.0},
+      {"rpm": 4000, "torque": 0.85},
+      {"rpm": 5500, "torque": 0.6}
+    ]
+  },
+  "braking": {
+    "a_light": 2.8,
+    "a_heavy": 7.5,
+    "longPressThresholdMs": 400,
+    "rampUpTimeMs": 900,
+    "absEnabled": true,
+    "brakeBias": 0.55
+  },
+  "engine": {
+ "nominalRpm": 2500,
+    "idleRpm": 700,
+    "maxRpm": 6000,
+    "redlineRpm": 5500,
+    "rpmIncreaseRate": 1500,
+    "rpmDecreaseRate": 1200
+  },
+  "suspension": {
+    "stiffness": 35000,
+    "damping": 1800,
+    "travel": 0.3,
+    "compression": 0.7,
+    "rebound": 0.5
+  },
+  "animations": {
+    "idle": "Idle",
+    "drive_slow": "DriveSlow",
+    "drive_fast": "DriveFast",
+    "brake": "Brake",
+    "steer": "Steer",
+    "wheelRotation": "WheelRotation"
+  },
+  "audio": {
+    "engine": {
+      "idle": "/assets/audio/engine_diesel_idle.mp3",
+      "low": "/assets/audio/engine_diesel_low.mp3",
+      "mid": "/assets/audio/engine_diesel_mid.mp3",
+      "high": "/assets/audio/engine_diesel_high.mp3"
+    },
+    "effects": {
+      "brake": "/assets/audio/brake_screech.mp3",
+      "horn": "/assets/audio/horn_truck.mp3"
+    }
+  },
+  "visual": {
+    "bodyColor": "#2A9D8F",
+    "wheelColor": "#3C3C3C",
+    "glassOpacity": 0.25,
+    "brakeLightIntensity": 1.8,
+    "headlightIntensity": 1.8
+  },
+  "unlockRequirements": {
+    "level": 3,
+ "currency": 3000
+  },
+  "stats": {
+    "acceleration": 65,
+    "topSpeed": 60,
+    "handling": 70,
+    "braking": 72,
+    "durability": 95
+  }
+}
