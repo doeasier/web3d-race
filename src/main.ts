@@ -361,45 +361,77 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  warningsContainer.style.maxHeight = '200px';
  warningsContainer.innerHTML = '';
 
- const modeSelect = document.createElement('select');
- const optFast = document.createElement('option'); optFast.value = 'fast'; optFast.text = 'Fast';
- const optPrecise = document.createElement('option'); optPrecise.value = 'precise'; optPrecise.text = 'Precise';
- modeSelect.appendChild(optFast); modeSelect.appendChild(optPrecise);
+ // show details button to open modal
+const showDetailsBtn = document.createElement('button');
+showDetailsBtn.textContent = 'Show details';
+showDetailsBtn.style.marginLeft = '8px';
 
- const exportTexturesBtn = document.createElement('button');
- exportTexturesBtn.textContent = 'Export Textures';
+// create modal overlay for warnings/errors
+const modalOverlay = document.createElement('div');
+modalOverlay.style.position = 'fixed';
+modalOverlay.style.left = '0';
+modalOverlay.style.top = '0';
+modalOverlay.style.width = '100%';
+modalOverlay.style.height = '100%';
+modalOverlay.style.background = 'rgba(0,0,0,0.6)';
+modalOverlay.style.display = 'none';
+modalOverlay.style.alignItems = 'center';
+modalOverlay.style.justifyContent = 'center';
+modalOverlay.style.zIndex = '9999';
 
- // toggle for InstanceRenderer usage
- const irLabel = document.createElement('label');
- irLabel.style.display = 'block';
- irLabel.style.marginTop = '8px';
- const irCheckbox = document.createElement('input');
- irCheckbox.type = 'checkbox';
- // initialize from URL param or localStorage
- try {
- const urlParams = new URLSearchParams(window.location.search);
- const param = urlParams.get('useInstanceRenderer');
- let initial = true;
- if (param !== null) {
- initial = param !== '0' && param !== 'false';
- } else {
- const stored = localStorage.getItem('useInstanceRenderer');
- if (stored !== null) initial = stored !== '0' && stored !== 'false';
- }
- irCheckbox.checked = initial;
- try { roadManager.setUseInstanceRenderer(initial); } catch (e) {}
- } catch (e) { irCheckbox.checked = true; }
- irCheckbox.onchange = () => {
- try { roadManager.setUseInstanceRenderer(irCheckbox.checked); } catch(e){}
- try { localStorage.setItem('useInstanceRenderer', irCheckbox.checked ? '1' : '0'); } catch (e) {}
- };
+const modalPanel = document.createElement('div');
+modalPanel.style.background = '#222';
+modalPanel.style.color = 'white';
+modalPanel.style.padding = '16px';
+modalPanel.style.borderRadius = '8px';
+modalPanel.style.maxWidth = '720px';
+modalPanel.style.maxHeight = '70%';
+modalPanel.style.overflowY = 'auto';
+modalPanel.style.boxShadow = '08px32px rgba(0,0,0,0.6)'
 
- irLabel.appendChild(irCheckbox);
- irLabel.appendChild(document.createTextNode(' Use InstanceRenderer'));
+const modalTitle = document.createElement('div');
+modalTitle.style.fontWeight = 'bold';
+modalTitle.style.marginBottom = '8px';
+modalTitle.textContent = 'Level load details';
+
+const modalContent = document.createElement('div');
+modalContent.style.fontSize = '13px';
+modalContent.style.lineHeight = '1.4';
+
+const modalControls = document.createElement('div');
+modalControls.style.marginTop = '12px';
+modalControls.style.textAlign = 'right';
+
+const clearWarningsBtn = document.createElement('button');
+clearWarningsBtn.textContent = 'Clear warnings';
+clearWarningsBtn.style.marginRight = '8px';
+
+const closeModalBtn = document.createElement('button');
+closeModalBtn.textContent = 'Close';
+
+modalControls.appendChild(clearWarningsBtn);
+modalControls.appendChild(closeModalBtn);
+modalPanel.appendChild(modalTitle);
+modalPanel.appendChild(modalContent);
+modalPanel.appendChild(modalControls);
+modalOverlay.appendChild(modalPanel);
+document.body.appendChild(modalOverlay);
+
+// hook up show details and modal controls
+showDetailsBtn.onclick = () => { modalOverlay.style.display = 'flex'; };
+closeModalBtn.onclick = () => { modalOverlay.style.display = 'none'; };
+clearWarningsBtn.onclick = () => {
+ warningsContainer.innerHTML = '';
+ modalContent.innerHTML = '';
+ modalOverlay.style.display = 'none';
+ loadStatus.textContent = 'Level: idle';
+ loadStatus.style.color = 'white';
+};
 
  ui.appendChild(startBtn); ui.appendChild(pauseBtn); ui.appendChild(prevLevelBtn); ui.appendChild(nextLevelBtn); ui.appendChild(modeSelect); ui.appendChild(exportTexturesBtn);
  ui.appendChild(loadStatus);
  ui.appendChild(warningsContainer);
+ ui.appendChild(showDetailsBtn);
  ui.appendChild(irLabel);
  // --- Physics backend selector ---
  const physLabel = document.createElement('label');
@@ -593,6 +625,7 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
 
  if (res.warnings && res.warnings.length) {
  warningsContainer.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
+ modalContent.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
  } else {
  warningsContainer.innerHTML = '';
  }
@@ -600,11 +633,14 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  if (res.errors && res.errors.length) {
  // show errors in red
  warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ modalContent.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
  }
 
  if (res.partial) {
  loadStatus.textContent = `Level: loaded (partial, see warnings)`;
  loadStatus.style.color = '#ffd966';
+ // auto-open modal for warnings/errors so user notices
+ modalOverlay.style.display = 'flex';
  } else {
  loadStatus.textContent = `Level: loaded`;
  loadStatus.style.color = 'lightgreen';
