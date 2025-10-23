@@ -15,33 +15,46 @@ export class LevelManager {
  }
 
  async loadLevel(url: string): Promise<LevelLoadResult> {
+ const loadedUrls: string[] = [];
+ let scene: any = null;
+ let collision: any = null;
+
+ try {
  // load level JSON
  const lvl = await this.resourceManager.loadJson(url);
+ loadedUrls.push(url);
+
  const vr = validateLevelJson(lvl);
  if (!vr.valid) {
  const err = new Error('Level JSON validation failed: ' + vr.errors.join('; '));
- // attach details for caller
  (err as any).validation = vr;
  throw err;
  }
 
  // load scene GLTF if present
- let scene: any = null;
  if (lvl.sceneUrl) {
- scene = await this.resourceManager.loadGLTF(lvl.sceneUrl).catch((e) => {
- throw new Error(`Failed to load scene ${lvl.sceneUrl}: ${e.message || e}`);
- });
+ scene = await this.resourceManager.loadGLTF(lvl.sceneUrl);
+ loadedUrls.push(lvl.sceneUrl);
  }
 
  // load optional collision data
- let collision: any = null;
  if (lvl.collisionUrl) {
- collision = await this.resourceManager.loadJson(lvl.collisionUrl).catch((e) => {
- throw new Error(`Failed to load collision ${lvl.collisionUrl}: ${e.message || e}`);
- });
+ collision = await this.resourceManager.loadJson(lvl.collisionUrl);
+ loadedUrls.push(lvl.collisionUrl);
  }
 
  return { scene, collision, levelJson: lvl };
+ } catch (e) {
+ // rollback: unload any resources that were already loaded by this call
+ for (const u of loadedUrls) {
+ try {
+ this.resourceManager.unload(u);
+ } catch (_err) {
+ // ignore unload errors
+ }
+ }
+ throw e;
+ }
  }
 
  async unloadLevel(url: string) {
