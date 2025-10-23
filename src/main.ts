@@ -464,23 +464,6 @@ if (persisted && ((persisted.warnings && persisted.warnings.length) || (persiste
  }
  loadStatus.textContent = 'Level: idle (saved warnings)';
  loadStatus.style.color = '#ffd966';
-}
-
-// ...later in loadLevel after receiving res and updating UI...
-// (replace the existing block that updates warningsContainer/modalContent)
- if (res.warnings && res.warnings.length) {
- warningsContainer.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
- modalContent.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
- saveWarningsToStorage(res.warnings, res.errors);
- } else {
- warningsContainer.innerHTML = '';
- }
-
- if (res.errors && res.errors.length) {
- // show errors in red
- warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
- modalContent.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
- saveWarningsToStorage(res.warnings, res.errors);
  }
 
 async function loadLevel(idx: number) {
