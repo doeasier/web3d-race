@@ -43,7 +43,7 @@ export class RenderModule implements InitModule {
       antialias: this.config.antialias ?? true
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(this.config.pixelRatio ?? window.devicePixelRatio || 1);
+    this.renderer.setPixelRatio(this.config.pixelRatio ?? (window.devicePixelRatio || 1));
 
     // Ìí¼Óµ½DOM
     const container = this.config.container ?? document.body;
