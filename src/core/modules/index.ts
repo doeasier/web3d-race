@@ -8,3 +8,5 @@ export { VehicleModule } from './VehicleModule';
 export { RoadModule } from './RoadModule';
 export { GpuModule } from './GpuModule';
 export { UIModule } from './UIModule';
+export { TextureModule } from './TextureModule';
+export { SceneModule } from './SceneModule';
