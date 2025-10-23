@@ -82,7 +82,9 @@ await this.initManager.initModule('scene');
       await this.initManager.initModule('physics');
 
       // 6. 车辆模块
-      const vehicleModule = new VehicleModule(physicsModule.physicsWorld);
+      // 使用默认车辆配置
+const { DefaultCityCar } = await import('./gameplay/VehicleProfile');
+      const vehicleModule = new VehicleModule(physicsModule.physicsWorld, DefaultCityCar);
       this.initManager.register(vehicleModule);
   await this.initManager.initModule('vehicle');
 
@@ -288,64 +290,69 @@ private lastTime = performance.now();
   private async handleModeChange(mode: string): Promise<void> {
     console.log('Mode change:', mode);
     
- if (mode === 'precise') {
+    if (mode === 'precise') {
       // 切换到精确模式
-const state = this.modules.vehicle.vehicle?.getState();
-    
-  // 重新创建vehicle
+      const state = this.modules.vehicle.vehicle?.getState();
+      
+      // 重新创建vehicle
+     const profile = this.modules.vehicle.getProfile();
       const preciseVehicle = new VehicleControllerPrecise(
-      this.modules.physics.physicsWorld,
+        this.modules.physics.physicsWorld,
         {
-          mass: this.modules.vehicle.profile.mass,
- wheelRadius: this.modules.vehicle.profile.wheelRadius,
-          maxSteerAngle: this.modules.vehicle.profile.maxSteerAngle
+         mass: profile.mass,
+         wheelRadius: profile.wheelRadius,
+         maxSteerAngle: profile.maxSteerAngle
         },
-     this.modules.vehicle.profile
-      );
-    
+       profile
+  );
+  
       this.modules.vehicle.vehicle = preciseVehicle;
       
- // 恢复状态
+      // 恢复状态
       if (state) {
-   preciseVehicle.reset({
-          position: state.position,
-  rotation: { x: 0, y: state.rotation?.y || 0, z: 0 }
-     });
+        preciseVehicle.reset({
+   position: state.position,
+          rotation: { x: 0, y: state.rotation?.y || 0, z: 0 }
+        });
       }
     } else {
-      // 切换回fast模式 - 重新初始化vehicle模块
+  // 切换回fast模式 - 重新初始化vehicle模块
       await this.modules.vehicle.init();
-    }
+}
   }
 
   private async handlePhysicsChange(backend: string): Promise<void> {
     try {
       this.modules.ui.physStatus.textContent = `Physics: switching to ${backend}...`;
-    
+ 
       const vehicleState = this.modules.vehicle.vehicle?.getState();
       
       await this.modules.physics.switchBackend(backend as any);
-      
+  
       // 重新创建vehicle
-      this.modules.vehicle = new VehicleModule(
-        this.modules.physics.physicsWorld,
-        this.modules.vehicle.profile
-   );
-await this.modules.vehicle.init();
+     // 保存当前配置
+     const currentProfile = this.modules.vehicle.getProfile();
+     
+     // 重新创建vehicle模块
+     this.modules.vehicle = new VehicleModule(
+       this.modules.physics.physicsWorld,
+       currentProfile
+     );
+      await this.modules.vehicle.init();
       
       // 恢复状态
       if (vehicleState) {
-        this.modules.vehicle.reset({
-          position: vehicleState.position,
+   this.modules.vehicle.reset({
+  position: vehicleState.position,
           rotation: { x: 0, y: vehicleState.rotation?.y || 0, z: 0 }
-        });
+  });
       }
 
       this.modules.ui.physStatus.textContent = `Physics: ${backend} initialized`;
-      console.log(`Physics backend switched to ${backend}`);
- } catch (e) {
+   console.log(`Physics backend switched to ${backend}`);
+    } catch (e) {
       console.error('Physics switch failed:', e);
-      this.modules.ui.physStatus.textContent = 'Physics: switch failed';
+    this.modules.ui.physStatus.textContent = 'Physics: switch failed';
     }
   }
 
