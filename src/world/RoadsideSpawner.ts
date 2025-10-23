@@ -65,6 +65,31 @@ export class RoadsideSpawner {
     this.baked = baked;
   }
 
+  // Load baked descriptors from a URL (JSON). Accepts an optional ResourceManager for caching/IO.
+  async loadBakedFromUrl(url: string, resourceManager?: { loadJson(url:string): Promise<any> }) {
+    try {
+      let data: any = null;
+      if (resourceManager && typeof resourceManager.loadJson === 'function') {
+        data = await resourceManager.loadJson(url);
+      } else {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to load baked scenery from ${url}`);
+        data = await res.json();
+      }
+      // Expect data to be an array of RoadObjectDesc or an object with `scenery` field
+      let descs: RoadObjectDesc[] = [];
+      if (Array.isArray(data)) descs = data;
+      else if (data && Array.isArray(data.scenery)) descs = data.scenery;
+      else if (data && Array.isArray(data.objects)) descs = data.objects;
+      else throw new Error('Unsupported baked scenery format');
+      this.loadBaked(descs);
+      return true;
+    } catch (e) {
+      // leave baked as-is on failure
+      return false;
+    }
+  }
+
   // Update active descriptors for given worldZ (meters)
   update(worldZ: number) {
     if (this.baked) {
