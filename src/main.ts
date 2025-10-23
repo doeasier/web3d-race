@@ -549,15 +549,10 @@ async function loadTracks() {
  }
  // default select first
  if (select.options.length >0) select.selectedIndex =0;
-}
-loadTracks();
 
-// update trackSelect.onchange usage later to reference element by id
-const trackSelectElem = () => document.getElementById('trackSelect') as HTMLSelectElement | null;
-(trackSelectElem() as any).onchange = async () => {
- const select = trackSelectElem();
- if (!select) return;
- const file = select.value;
+ // attach onchange handler directly to this select so it's always wired
+ select.onchange = async () => {
+ const file = select!.value;
  try {
  const res = await fetch(`/assets/tracks/${file}`);
  const j = await res.json();
@@ -586,7 +581,9 @@ const trackSelectElem = () => document.getElementById('trackSelect') as HTMLSele
  try { vehicle.reset({ position: { x: sp.position[0], y: sp.position[1], z: sp.position[2] }, rotation: { x:0, y: sp.rotation[1] ||0, z:0 } }); } catch (e) { }
  }
  } catch (e) { console.warn('Failed to load track', e); }
-};
+ };
+}
+loadTracks();
 
 window.addEventListener('resize', () => {
  camera.aspect = window.innerWidth / window.innerHeight;
