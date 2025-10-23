@@ -14,15 +14,29 @@ export class WebGpuCuller {
   uniBuffer: any = null;
   maxInstances: number = 0;
 
-  async init(maxInstances = 65536) {
+  async init(maxInstances =65536) {
     try {
       console.log('WebGpuCuller.init: navigator present?', typeof navigator !== 'undefined');
       console.log('WebGpuCuller.init: navigator.gpu present?', typeof navigator !== 'undefined' && 'gpu' in navigator);
       if (!('gpu' in navigator)) return false;
       this.maxInstances = maxInstances;
-      this.adapter = await (navigator as any).gpu.requestAdapter();
+      // request adapter with high-performance preference to favor discrete GPU
+      try {
+        this.adapter = await (navigator as any).gpu.requestAdapter({ powerPreference: 'high-performance' });
+      } catch (reqErr) {
+        console.warn('WebGpuCuller.init: requestAdapter threw, trying default requestAdapter', reqErr);
+        this.adapter = await (navigator as any).gpu.requestAdapter();
+      }
       console.log('WebGpuCuller.init: adapter=', this.adapter);
       if (!this.adapter) return false;
+      // log adapter features and limits if available
+      try {
+        const feats = Array.from((this.adapter as any).features || []);
+        console.log('WebGpuCuller.init: adapter.features=', feats);
+      } catch (e) { console.warn('WebGpuCuller.init: cannot read adapter.features', e); }
+      try {
+        console.log('WebGpuCuller.init: adapter.limits=', (this.adapter as any).limits || 'n/a');
+      } catch (e) { console.warn('WebGpuCuller.init: cannot read adapter.limits', e); }
       this.device = await this.adapter.requestDevice();
       console.log('WebGpuCuller.init: device=', this.device);
       if (!this.device) return false;
