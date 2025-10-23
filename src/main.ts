@@ -14,6 +14,7 @@ import { AssetLoader } from './core/AssetLoader';
 import { InstanceRenderer } from './world/InstanceRenderer';
 import GpuCuller from './world/GpuCuller';
 import WebGpuCuller from './world/WebGpuCuller';
+import { EngineFactory } from './core/EngineFactory';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight,0.1,1000);
