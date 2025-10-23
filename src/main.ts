@@ -345,6 +345,22 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  const nextLevelBtn = document.createElement('button');
  nextLevelBtn.textContent = 'Next Level';
 
+ // loading status and validation warnings area
+ const loadStatus = document.createElement('div');
+ loadStatus.style.marginTop = '8px';
+ loadStatus.style.fontSize = '12px';
+ loadStatus.style.color = 'white';
+ loadStatus.textContent = 'Level: idle';
+
+ const warningsContainer = document.createElement('div');
+ warningsContainer.style.marginTop = '6px';
+ warningsContainer.style.fontSize = '12px';
+ warningsContainer.style.color = '#ffd966'; // yellow-ish for warnings
+ warningsContainer.style.maxWidth = '320px';
+ warningsContainer.style.overflowY = 'auto';
+ warningsContainer.style.maxHeight = '200px';
+ warningsContainer.innerHTML = '';
+
  const modeSelect = document.createElement('select');
  const optFast = document.createElement('option'); optFast.value = 'fast'; optFast.text = 'Fast';
  const optPrecise = document.createElement('option'); optPrecise.value = 'precise'; optPrecise.text = 'Precise';
@@ -382,6 +398,8 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  irLabel.appendChild(document.createTextNode(' Use InstanceRenderer'));
 
  ui.appendChild(startBtn); ui.appendChild(pauseBtn); ui.appendChild(prevLevelBtn); ui.appendChild(nextLevelBtn); ui.appendChild(modeSelect); ui.appendChild(exportTexturesBtn);
+ ui.appendChild(loadStatus);
+ ui.appendChild(warningsContainer);
  ui.appendChild(irLabel);
  // --- Physics backend selector ---
  const physLabel = document.createElement('label');
@@ -566,9 +584,32 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  async function loadLevel(idx: number) {
  try {
  const lvlUrl = levels[Math.max(0, Math.min(idx, levels.length -1))].sceneUrl;
+ // UI: show loading status
+ loadStatus.textContent = `Level: loading ${lvlUrl}...`;
+ warningsContainer.innerHTML = '';
  const ctx = { scene, vehicle, carMeshRef: { value: carMesh }, gltfLoader, assetLoader, spawner };
  const res = await engineFactory.loadAndApplyLevel(lvlUrl, ctx);
- console.log('Loaded level', res.levelJson);
+ console.log('Loaded level result', res);
+
+ if (res.warnings && res.warnings.length) {
+ warningsContainer.innerHTML = '<b>Warnings:</b><br/>' + res.warnings.map(w => `<div>- ${w}</div>`).join('');
+ } else {
+ warningsContainer.innerHTML = '';
+ }
+
+ if (res.errors && res.errors.length) {
+ // show errors in red
+ warningsContainer.innerHTML += '<div style="color:#ff6b6b"><b>Errors:</b></div>' + res.errors.map(e => `<div style="color:#ff6b6b">- ${e}</div>`).join('');
+ }
+
+ if (res.partial) {
+ loadStatus.textContent = `Level: loaded (partial, see warnings)`;
+ loadStatus.style.color = '#ffd966';
+ } else {
+ loadStatus.textContent = `Level: loaded`;
+ loadStatus.style.color = 'lightgreen';
+ }
+
  // if engineFactory replaced carMeshRef, update local reference
  if (ctx.carMeshRef && ctx.carMeshRef.value) {
  carMesh = ctx.carMeshRef.value;
@@ -577,9 +618,11 @@ vehicle = new VehicleControllerFast(physicsWorld, { mass: profile.mass, wheelRad
  }
  } catch (e) {
  console.error('Failed to load level', e);
+ loadStatus.textContent = `Level: failed to load`;
+ loadStatus.style.color = '#ff6b6b';
+ warningsContainer.innerHTML = `<div style="color:#ff6b6b">${e?.message ?? String(e)}</div>`;
  }
  }
- loadLevel(0);
 
  // Load available tracks from assets/tracks (simple fetch on JSON files)
  async function loadTracks() {

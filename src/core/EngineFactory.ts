@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ResourceManager } from './ResourceManager';
 import { LevelManager } from './LevelManager';
+import { validateLevelJson } from './LevelConfig';
 
 export type LoadLevelContext = {
  scene: THREE.Scene;
@@ -9,6 +10,14 @@ export type LoadLevelContext = {
  gltfLoader?: any; // GLTFLoaderWrapper compatible
  assetLoader?: any;
  spawner?: any;
+};
+
+export type LoadLevelResult = {
+ levelJson?: any;
+ sceneAsset?: any | null;
+ errors: string[];
+ warnings: string[];
+ partial: boolean; // true if any errors occurred but partial assets may have been loaded
 };
 
 export class EngineFactory {
@@ -22,25 +31,50 @@ export class EngineFactory {
 
  // Load a level JSON and apply key parts into provided context (scene, vehicle, spawner)
  // Returns the loaded level json and any loaded scene asset (GLTF result)
- async loadAndApplyLevel(levelUrl: string, ctx: LoadLevelContext) {
+ // Now returns detailed errors/warnings and partial flag instead of throwing on validation failures.
+ async loadAndApplyLevel(levelUrl: string, ctx: LoadLevelContext): Promise<LoadLevelResult> {
  const { scene, vehicle, carMeshRef, gltfLoader, assetLoader, spawner } = ctx;
- const res = await this.levelManager.loadLevel(levelUrl);
- const lvl = res.levelJson;
- // if scene asset present, add to renderer scene
- if (res.scene) {
- const gltf = res.scene;
- const model = gltf.scene ? gltf.scene : gltf;
- // If caller provided a carMeshRef, replace its value
+ const errors: string[] = [];
+ const warnings: string[] = [];
+ let lvl: any = null;
+ let sceneAsset: any | null = null;
+
+ try {
+ // load raw level JSON first
+ lvl = await this.resourceManager.loadJson(levelUrl);
+ } catch (e: any) {
+ throw new Error(`Failed to load level JSON ${levelUrl}: ${e?.message ?? e}`);
+ }
+
+ // validate and collect warnings/errors but continue to attempt loading referenced assets
+ try {
+ const vr = validateLevelJson(lvl);
+ if (!vr.valid) errors.push(...vr.errors);
+ if (vr.warnings && vr.warnings.length) warnings.push(...vr.warnings);
+ } catch (e: any) {
+ // unexpected validation failure
+ warnings.push(`Level validation threw: ${e?.message ?? String(e)}`);
+ }
+
+ // attempt to load scene asset if available
+ if (lvl && lvl.sceneUrl) {
+ try {
+ sceneAsset = await this.resourceManager.loadGLTF(lvl.sceneUrl);
+ const gltf = sceneAsset;
+ const model = gltf && gltf.scene ? gltf.scene : gltf;
  if (carMeshRef) {
  try { if (carMeshRef.value) scene.remove(carMeshRef.value); } catch (e) {}
  carMeshRef.value = model;
  try { scene.add(model); } catch (e) {}
  }
+ } catch (e: any) {
+ errors.push(`Failed to load scene ${lvl.sceneUrl}: ${e?.message ?? e}`);
+ }
  }
 
  // position vehicle at start if provided
  try {
- if (vehicle && lvl.startPositions && lvl.startPositions[0]) {
+ if (vehicle && lvl?.startPositions && lvl.startPositions[0]) {
  const sp = lvl.startPositions[0];
  let pos = null;
  let rotY =0;
@@ -60,15 +94,20 @@ export class EngineFactory {
  try { vehicle.reset({ position: pos, rotation: { x:0, y: rotY, z:0 } }); } catch (e) {}
  }
  }
- } catch (e) {}
+ } catch (e) {
+ warnings.push(`Failed to position vehicle from level data: ${e?.message ?? e}`);
+ }
 
  // load baked scenery via spawner if provided
  try {
- if (lvl.bakedSceneryUrl && spawner && typeof spawner.loadBakedFromUrl === 'function') {
+ if (lvl && lvl.bakedSceneryUrl && spawner && typeof spawner.loadBakedFromUrl === 'function') {
  await spawner.loadBakedFromUrl(lvl.bakedSceneryUrl, this.resourceManager);
  }
- } catch (e) {}
+ } catch (e: any) {
+ warnings.push(`Failed to load baked scenery ${lvl?.bakedSceneryUrl}: ${e?.message ?? e}`);
+ }
 
- return { levelJson: lvl, sceneAsset: res.scene };
+ const partial = errors.length >0;
+ return { levelJson: lvl, sceneAsset, errors, warnings, partial };
  }
 }
