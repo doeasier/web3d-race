@@ -41,16 +41,21 @@ export class WebGpuCuller {
       console.log('WebGpuCuller.init: device=', this.device);
       if (!this.device) return false;
 
-      const posSize = maxInstances * 4 * 4; // vec4 f32
-      const indexSize = maxInstances * 4; // u32 per index
-      const counterSize = 4; // single u32
-      const BU = (this.device as any).GPUBufferUsage;
+      const posSize = maxInstances *4 *4; // vec4 f32
+      const indexSize = maxInstances *4; // u32 per index
+      const counterSize =4; // single u32
+      // GPUBufferUsage is a global enum; some implementations expose it on globalThis
+      const BU = (globalThis as any).GPUBufferUsage || (this.device as any).GPUBufferUsage;
+      if (!BU || typeof BU.STORAGE === 'undefined') {
+        console.warn('WebGpuCuller.init: GPUBufferUsage not available on this platform');
+        return false;
+      }
       this.posBuffer = this.device.createBuffer({ size: posSize, usage: BU.STORAGE | BU.COPY_DST });
       this.indexBuffer = this.device.createBuffer({ size: indexSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
       this.counterBuffer = this.device.createBuffer({ size: counterSize, usage: BU.STORAGE | BU.COPY_SRC | BU.COPY_DST });
       this.readbackIndex = this.device.createBuffer({ size: indexSize, usage: BU.COPY_DST | BU.MAP_READ });
       this.readbackCounter = this.device.createBuffer({ size: counterSize, usage: BU.COPY_DST | BU.MAP_READ });
-      this.uniBuffer = this.device.createBuffer({ size: 80, usage: BU.UNIFORM | BU.COPY_DST });
+      this.uniBuffer = this.device.createBuffer({ size:80, usage: BU.UNIFORM | BU.COPY_DST });
 
       const shader = `
       struct Pos { x: f32; y: f32; z: f32; w: f32; };
