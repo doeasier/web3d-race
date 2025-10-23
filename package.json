@@ -4,8 +4,12 @@
   "private": true,
   "scripts": {
     "start": "vite",
-    "build": "echo \"No build configured\"",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest --run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "demo": "npx http-server demos -p 8081",
     "demo:ci": "node tools/ci/run_gpu_demo.js",
     "typecheck": "tsc --noEmit",
