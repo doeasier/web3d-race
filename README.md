@@ -35,16 +35,26 @@ npm test
 ## ?? 文档导航
 
 ### 核心文档
-- [**迁移成功报告**](./docs/MIGRATION_SUCCESS.md) - ?? 最新迁移总结
+- [**文档总览**](./docs/DOCUMENTATION_SUMMARY.md) - ?? 文档体系说明
+- [**需求文档**](./docs/REQUIREMENTS.md) - ?? 详细功能需求和优先级
+- [**技术设计**](./docs/TECHNICAL_DESIGN.md) - ??? 架构和模块设计
+- [**开发路线图**](./docs/ROADMAP.md) - ??? 里程碑和任务规划
+- [**代码现状**](./docs/CODE_STATUS.md) - ?? 当前状态和改进建议
+- [**迁移成功报告**](./docs/MIGRATION_SUCCESS.md) - ? 最新迁移总结
 - [**架构设计**](./docs/initialization_system.md) - 模块化系统详解
 - [**迁移指南**](./docs/migration_guide.md) - 如何迁移现有代码
 - [**前后对比**](./docs/migration_comparison.md) - 迁移前后详细对比
 - [**快速参考**](./docs/quick_reference.md) - 速查卡片
 
 ### 系统设计
-- [系统设计文档](./docs/system_design.md)
-- [环境系统设计](./docs/environment_system_design.md)
-- [车辆设计文档](./docs/vehicle_design.md)
+- [车辆系统文档](./docs/VEHICLE_SYSTEM.md) - ?? 完整车辆系统说明
+- [车辆设计文档](./docs/vehicle_design.md) - ??? 车辆物理和控制
+- [环境系统设计](./docs/environment_system_design.md) - ?? 环境和优化
+- [系统设计文档](./docs/system_design.md) - ?? 旧版系统设计
+
+### 快速开始
+- [快速入门](./docs/GETTING_STARTED.md) - ?? 5分钟上手
+- [故障排除](./docs/TROUBLESHOOTING.md) - ?? 常见问题解决
 
 ## ??? 架构概览
 
