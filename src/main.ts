@@ -22,6 +22,9 @@ import { SceneModule } from './core/modules/SceneModule';
 import { InputManager } from './core/InputManager';
 import { EngineFactory } from './core/EngineFactory';
 import { VehicleControllerPrecise } from './gameplay/VehicleControllerPrecise';
+import { getVehicleManager, resetVehicleManager } from './core/VehicleManager';
+import { VehicleSelectionUI } from './ui/VehicleSelectionUI';
+import type { VehicleConfig } from './core/VehicleConfig';
 
 /**
  * 应用主类
@@ -31,9 +34,11 @@ class RacingGameApp {
   private modules: any = {};
   private input!: InputManager;
   private engineFactory!: EngineFactory;
+  private selectedVehicleConfig: VehicleConfig | null = null;
+  private vehicleSelectionUI: VehicleSelectionUI | null = null;
   
   // 游戏状态
- private running = true;
+  private running = true;
   private paused = false;
   private worldZ = 0;
   private currentLevel = 0;
@@ -46,6 +51,48 @@ class RacingGameApp {
   private WARNINGS_STORAGE_KEY = 'levelLoadWarnings';
 
   /**
+   * 显示车辆选择界面
+   */
+  private async showVehicleSelection(): Promise<VehicleConfig> {
+    return new Promise((resolve, reject) => {
+      try {
+        const vehicleManager = getVehicleManager(this.modules.resource.resourceManager);
+        
+        this.vehicleSelectionUI = new VehicleSelectionUI(vehicleManager, {
+          onVehicleSelected: (vehicleId: string) => {
+            console.log(`Vehicle selected: ${vehicleId}`);
+            this.selectedVehicleConfig = vehicleManager.getVehicleConfig(vehicleId);
+          },
+          onStartGame: () => {
+            if (this.selectedVehicleConfig) {
+              console.log(`Starting game with vehicle: ${this.selectedVehicleConfig.id}`);
+              this.vehicleSelectionUI?.hide();
+              resolve(this.selectedVehicleConfig);
+            } else {
+              console.warn('No vehicle selected');
+            }
+          },
+          onClose: () => {
+            this.vehicleSelectionUI?.hide();
+            // 使用默认车辆
+            const defaultVehicle = vehicleManager.getSelectedVehicle();
+            if (defaultVehicle) {
+              resolve(defaultVehicle);
+            } else {
+              reject(new Error('No vehicle available'));
+            }
+          }
+        });
+        
+        this.vehicleSelectionUI.show();
+      } catch (error) {
+        console.error('Failed to show vehicle selection:', error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
    * 初始化所有模块
    */
   async initialize(): Promise<void> {
@@ -54,135 +101,186 @@ class RacingGameApp {
     try {
       // 1. 渲染模块
       const renderModule = new RenderModule();
-      this.initManager.register(renderModule);
-await this.initManager.initModule('render');
+this.initManager.register(renderModule);
+      await this.initManager.initModule('render');
 
-      // 2. 纹理模块
-   const textureModule = new TextureModule();
+   // 2. 纹理模块
+  const textureModule = new TextureModule();
       this.initManager.register(textureModule);
       await this.initManager.initModule('textures');
 
-// 3. 场景模块（天空、地面、车辆占位）
+      // 3. 场景模块（天空、地面、车辆占位）
       const sceneModule = new SceneModule(
-   renderModule.scene,
-        textureModule.carTexture,
+    renderModule.scene,
+ textureModule.carTexture,
         textureModule.skyTexture
       );
       this.initManager.register(sceneModule);
-await this.initManager.initModule('scene');
+      await this.initManager.initModule('scene');
 
   // 4. 资源模块
       const resourceModule = new ResourceModule();
       this.initManager.register(resourceModule);
       await this.initManager.initModule('resources');
 
-   // 5. 物理模块
-  const physicsModule = new PhysicsModule('rapier');
+      // 5. 物理模块
+      const physicsModule = new PhysicsModule('rapier');
       this.initManager.register(physicsModule);
       await this.initManager.initModule('physics');
 
-      // 6. 车辆模块
-      // 使用默认车辆配置
-const { DefaultCityCar } = await import('./gameplay/VehicleProfile');
-      const vehicleModule = new VehicleModule(physicsModule.physicsWorld, DefaultCityCar);
-      this.initManager.register(vehicleModule);
-  await this.initManager.initModule('vehicle');
+     // ===== 车辆选择系统 =====
+     console.log('=== Initializing Vehicle System ===');
+     
+     // 初始化车辆管理器
+ const vehicleManager = getVehicleManager(resourceModule.resourceManager);
+   await vehicleManager.initialize();
+     console.log('Vehicle manager initialized');
+     
+     // 显示车辆选择界面
+     console.log('Showing vehicle selection UI...');
+     let vehicleConfig: VehicleConfig;
+     
+     try {
+       vehicleConfig = await this.showVehicleSelection();
+       console.log('Selected vehicle:', vehicleConfig.displayName);
+     } catch (error) {
+     console.warn('Vehicle selection failed, using default:', error);
+       // 如果选择失败，使用默认车辆
+       vehicleConfig = vehicleManager.getSelectedVehicle();
+       if (!vehicleConfig) {
+    throw new Error('No vehicle available');
+   }
+  }
+     
+     this.selectedVehicleConfig = vehicleConfig;
 
-      // 7. 道路模块
+     // 6. 车辆模块
+     // 使用选中的车辆配置
+     console.log('Creating vehicle module with:', vehicleConfig.displayName);
+     const vehicleModule = new VehicleModule(physicsModule.physicsWorld, vehicleConfig);
+      this.initManager.register(vehicleModule);
+      await this.initManager.initModule('vehicle');
+
+// 7. 道路模块
       const roadMat = new THREE.MeshStandardMaterial({ map: textureModule.roadTexture });
       const roadModule = new RoadModule(
-      renderModule.scene,
+    renderModule.scene,
         renderModule.camera,
- roadMat,
+  roadMat,
         resourceModule.assetLoader,
         6, // roadWidth
- {
-          segmentLength: 50,
+        {
+    segmentLength: 50,
           numSegments: 12,
-          textureRepeatY: 8,
- scrollFactor: 0.2,
-          roadOffset: 0,
-     controlPoints: [
-            { x: 0, z: 0 },
-     { x: 6, z: 120 },
-     { x: -4, z: 260 },
-       { x: 0, z: 400 },
-        { x: 8, z: 560 }
-          ],
+    textureRepeatY: 8,
+          scrollFactor: 0.2,
+       roadOffset: 0,
+          controlPoints: [
+       { x: 0, z: 0 },
+         { x: 6, z: 120 },
+          { x: -4, z: 260 },
+     { x: 0, z: 400 },
+       { x: 8, z: 560 }
+  ],
   closed: false
-        }
+ }
       );
       this.initManager.register(roadModule);
       await this.initManager.initModule('road');
 
       // 8. GPU模块（可选）
-      const gpuModule = new GpuModule();
-      this.initManager.register(gpuModule);
-   await this.initManager.initModule('gpu');
+  const gpuModule = new GpuModule();
+    this.initManager.register(gpuModule);
+  await this.initManager.initModule('gpu');
 
       // 9. UI模块
       const uiModule = new UIModule({
-      onStart: () => this.handleStart(),
+     onStart: () => this.handleStart(),
         onPause: () => this.handlePause(),
         onPrevLevel: () => this.handlePrevLevel(),
-        onNextLevel: () => this.handleNextLevel(),
+  onNextLevel: () => this.handleNextLevel(),
   onModeChange: (mode) => this.handleModeChange(mode),
-        onPhysicsChange: (backend) => this.handlePhysicsChange(backend),
-      onTrackChange: (trackFile) => this.handleTrackChange(trackFile),
-        onExportTextures: () => this.handleExportTextures()
+  onPhysicsChange: (backend) => this.handlePhysicsChange(backend),
+        onTrackChange: (trackFile) => this.handleTrackChange(trackFile),
+       onExportTextures: () => this.handleExportTextures(),
+       onChangeVehicle: () => this.handleChangeVehicle()
       });
-      this.initManager.register(uiModule);
+    this.initManager.register(uiModule);
       await this.initManager.initModule('ui');
 
       // 保存模块引用
-  this.modules = {
-   render: renderModule,
-   textures: textureModule,
+      this.modules = {
+        render: renderModule,
+        textures: textureModule,
         scene: sceneModule,
         resource: resourceModule,
-    physics: physicsModule,
+     physics: physicsModule,
         vehicle: vehicleModule,
-    road: roadModule,
-        gpu: gpuModule,
-        ui: uiModule
-};
+        road: roadModule,
+ gpu: gpuModule,
+      ui: uiModule
+      };
 
       // 创建其他组件
       this.input = new InputManager();
       this.engineFactory = new EngineFactory(resourceModule.resourceManager);
 
       // 更新WebGPU UI
- if (gpuModule.isWebGpuAvailable) {
-        uiModule.webgpuStatus.textContent = 'WebGPU: available (click details)';
+   if (gpuModule.isWebGpuAvailable) {
+   uiModule.webgpuStatus.textContent = 'WebGPU: available (click details)';
         uiModule.webgpuContent.textContent = gpuModule.getAdapterInfoJson();
       } else {
         uiModule.webgpuStatus.textContent = 'WebGPU: not available';
-      }
+    }
 
       // 设置物理状态
       uiModule.physStatus.textContent = 'Physics: Rapier initialized';
+     
+  // 显示当前车辆信息
+     if (this.selectedVehicleConfig) {
+       const vehicleInfo = document.createElement('div');
+       vehicleInfo.id = 'current-vehicle-info';
+       vehicleInfo.style.cssText = `
+         position: fixed;
+  top: 120px;
+         left: 10px;
+         background: rgba(0,0,0,0.7);
+     color: white;
+         padding: 10px;
+  border-radius: 5px;
+      font-family: monospace;
+         font-size: 12px;
+       z-index: 100;
+       `;
+       vehicleInfo.innerHTML = `
+         <strong>?? Vehicle:</strong> ${this.selectedVehicleConfig.displayName}<br>
+         <small>Mass: ${this.selectedVehicleConfig.physics.mass}kg | 
+         Max Speed: ${this.selectedVehicleConfig.acceleration.maxSpeed}m/s</small>
+   `;
+       document.body.appendChild(vehicleInfo);
+     }
 
- // 加载持久化的警告
+  // 加载持久化的警告
       this.loadPersistedWarnings();
 
       // 加载可用轨道
       await this.loadTracks();
 
-  // 监听初始化事件
+      // 监听初始化事件
       this.initManager.on((event) => {
         console.log(`[Init] ${event.module}: ${event.phase}`, event.error || '');
-        
-   // 可以在这里添加UI更新逻辑
-    if (event.phase === 'error') {
-console.error(`Module ${event.module} failed:`, event.error);
+      
+  // 可以在这里添加UI更新逻辑
+        if (event.phase === 'error') {
+          console.error(`Module ${event.module} failed:`, event.error);
         }
-});
+      });
 
-   console.log('=== RacingGameApp: Initialization Complete ===');
+      console.log('=== RacingGameApp: Initialization Complete ===');
     } catch (error) {
       console.error('RacingGameApp: Fatal initialization error', error);
-  this.showFatalError(error);
-    throw error;
+      this.showFatalError(error);
+      throw error;
     }
   }
 
@@ -404,18 +502,73 @@ s + (p.bank || 0), 0) / trackData.controlPoints.length;
     const texModule = this.modules.textures as TextureModule;
     
     ['car', 'road', 'sky'].forEach((type: any) => {
-const dataUrl = texModule.exportTexture(type);
+      const dataUrl = texModule.exportTexture(type);
       if (dataUrl) {
         const link = document.createElement('a');
         link.download = `${type}_texture.png`;
-link.href = dataUrl;
+      link.href = dataUrl;
         link.click();
       }
-    });
+ });
     
     console.log('Textures exported');
   }
 
+  /**
+   * 处理切换车辆
+   */
+  private async handleChangeVehicle(): Promise<void> {
+   try {
+ console.log('Changing vehicle...');
+     
+ // 暂停游戏
+     const wasPaused = this.paused;
+     this.paused = true;
+     
+     // 保存当前车辆状态
+     const currentState = this.modules.vehicle.vehicle?.getState();
+     
+     // 显示车辆选择界面
+     const newVehicleConfig = await this.showVehicleSelection();
+     
+     if (!newVehicleConfig) {
+       console.warn('Vehicle selection cancelled');
+    this.paused = wasPaused;
+       return;
+     }
+     
+     // 重新初始化车辆模块
+   console.log(`Switching to vehicle: ${newVehicleConfig.displayName}`);
+     await this.modules.vehicle.reinitialize(newVehicleConfig);
+     
+   // 恢复状态
+     if (currentState) {
+       this.modules.vehicle.reset({
+         position: currentState.position,
+   rotation: { x: 0, y: currentState.rotation?.y || 0, z: 0 }
+       });
+     }
+     
+     // 更新UI显示
+     const vehicleInfo = document.getElementById('current-vehicle-info');
+     if (vehicleInfo) {
+    vehicleInfo.innerHTML = `
+         <strong>?? Vehicle:</strong> ${newVehicleConfig.displayName}<br>
+       <small>Mass: ${newVehicleConfig.physics.mass}kg | 
+      Max Speed: ${newVehicleConfig.acceleration.maxSpeed}m/s</small>
+       `;
+     }
+     
+     this.selectedVehicleConfig = newVehicleConfig;
+     
+     // 恢复游戏状态
+     this.paused = wasPaused;
+     
+     console.log('Vehicle changed successfully');
+   } catch (error) {
+     console.error('Failed to change vehicle:', error);
+   }
+ }
   /**
    * 加载关卡
    */

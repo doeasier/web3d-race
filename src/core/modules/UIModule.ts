@@ -12,6 +12,7 @@ export interface UICallbacks {
   onPhysicsChange?: (backend: string) => void;
   onTrackChange?: (trackFile: string) => void;
   onExportTextures?: () => void;
+  onChangeVehicle?: () => void;
 }
 
 export class UIModule implements InitModule {
@@ -28,8 +29,9 @@ export class UIModule implements InitModule {
   startBtn!: HTMLButtonElement;
   pauseBtn!: HTMLButtonElement;
   prevLevelBtn!: HTMLButtonElement;
-nextLevelBtn!: HTMLButtonElement;
+  nextLevelBtn!: HTMLButtonElement;
   exportTexturesBtn!: HTMLButtonElement;
+  changeVehicleBtn!: HTMLButtonElement;
 
   // 选择器
   modeSelect!: HTMLSelectElement;
@@ -93,6 +95,12 @@ this.createModals();
     this.prevLevelBtn = this.createButton('Prev Level');
     this.nextLevelBtn = this.createButton('Next Level');
     this.exportTexturesBtn = this.createButton('Export Textures');
+    this.changeVehicleBtn = this.createButton('Change Vehicle');
+    this.changeVehicleBtn.style.backgroundColor = '#ff6b35';
+    this.changeVehicleBtn.style.color = 'white';
+    this.changeVehicleBtn.style.fontWeight = 'bold';
+    this.changeVehicleBtn.style.marginTop = '8px';
+    this.changeVehicleBtn.style.cursor = 'pointer';
 
     // 模式选择
     this.modeSelect = document.createElement('select');
@@ -155,13 +163,14 @@ this.trackSelect = document.createElement('select');
     // 组装UI
     this.ui.appendChild(this.startBtn);
     this.ui.appendChild(this.pauseBtn);
+    this.ui.appendChild(this.changeVehicleBtn);
     this.ui.appendChild(this.prevLevelBtn);
     this.ui.appendChild(this.nextLevelBtn);
     this.ui.appendChild(this.modeSelect);
-this.ui.appendChild(this.exportTexturesBtn);
+    this.ui.appendChild(this.exportTexturesBtn);
     this.ui.appendChild(this.loadStatus);
     this.ui.appendChild(this.warningsContainer);
- this.ui.appendChild(showDetailsBtn);
+    this.ui.appendChild(showDetailsBtn);
     this.ui.appendChild(physLabel);
     this.ui.appendChild(this.physSelect);
     this.ui.appendChild(this.physStatus);
@@ -171,7 +180,7 @@ this.ui.appendChild(this.exportTexturesBtn);
     this.ui.appendChild(this.trackSelect);
     this.ui.appendChild(this.bankLabel);
 
-  document.body.appendChild(this.ui);
+    document.body.appendChild(this.ui);
   }
 
   private createModals(): void {
@@ -268,6 +277,7 @@ modalControls.appendChild(clearWarningsBtn);
   private wireCallbacks(): void {
     this.startBtn.onclick = () => this.callbacks.onStart?.();
     this.pauseBtn.onclick = () => this.callbacks.onPause?.();
+    this.changeVehicleBtn.onclick = () => this.callbacks.onChangeVehicle?.();
     this.prevLevelBtn.onclick = () => this.callbacks.onPrevLevel?.();
     this.nextLevelBtn.onclick = () => this.callbacks.onNextLevel?.();
     this.exportTexturesBtn.onclick = () => this.callbacks.onExportTextures?.();
